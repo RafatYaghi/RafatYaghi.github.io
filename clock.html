@@ -3,18 +3,48 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Clock</title>
+<title>Clock with Day Progress Grid</title>
 <style>
   body {
     margin: 0;
     height: 100vh;
     background: #f7f7f7;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
+
+  #progress {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap: 2px;
+    z-index: 0;
+    padding: 5px;
+    box-sizing: border-box;
+  }
+
+  .segment {
+    background: transparent;
+    transition: background 0.3s;
+  }
+
+  .segment.visible {
+    background: rgba(255, 0, 0, 0.1);
+  }
+
+  #clock-container {
+    position: relative;
+    z-index: 1;
+    height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    font-family: Arial, sans-serif;
-    overflow: hidden;
   }
 
   #clock {
@@ -22,25 +52,12 @@
     font-weight: 900;
     color: #333;
     display: flex;
-    gap: 0.2em;
+    gap: 0.3em;
+    line-height: 1;
   }
 
-  #clock .seconds {
-    color: #bbb;
-  }
-
-  .digit {
-    display: inline-block;
-    position: relative;
-    overflow: hidden;
-    height: 1em;
-  }
-
-  .digit span {
-    display: block;
-    position: absolute;
-    width: 100%;
-    transition: transform 0.4s ease-in-out;
+  .seconds {
+    color: #888;
   }
 
   button {
@@ -61,39 +78,27 @@
 </head>
 <body>
 
-<div id="clock"></div>
-<button id="fullscreen">Toggle Fullscreen</button>
-<div id="date"></div>
+<div id="progress"></div>
+
+<div id="clock-container">
+  <div id="clock"></div>
+  <button id="fullscreen">Toggle Fullscreen</button>
+  <div id="date"></div>
+</div>
 
 <script>
   const clock = document.getElementById('clock');
   const dateDiv = document.getElementById('date');
   const btn = document.getElementById('fullscreen');
+  const progress = document.getElementById('progress');
 
-  function createDigitContainer() {
-    const container = document.createElement('div');
-    container.className = 'digit';
-    const span1 = document.createElement('span');
-    const span2 = document.createElement('span');
-    container.appendChild(span1);
-    container.appendChild(span2);
-    return container;
-  }
-
-  const digits = [];
-
-  // build initial structure
-  for (let i = 0; i < 8; i++) {
-    if (i === 2 || i === 5) {
-      const colon = document.createElement('span');
-      colon.textContent = ':';
-      colon.style.margin = '0 0.1em';
-      clock.appendChild(colon);
-    } else {
-      const container = createDigitContainer();
-      digits.push(container);
-      clock.appendChild(container);
-    }
+  // create 48 segments in a grid
+  const segments = [];
+  for (let i = 0; i < 48; i++) {
+    const seg = document.createElement('div');
+    seg.className = 'segment';
+    progress.appendChild(seg);
+    segments.push(seg);
   }
 
   function updateClock() {
@@ -101,25 +106,27 @@
     const h = String(now.getHours()).padStart(2, '0');
     const m = String(now.getMinutes()).padStart(2, '0');
     const s = String(now.getSeconds()).padStart(2, '0');
-    const timeStr = h + m + s;
+
+    clock.innerHTML = `
+      <span>${h}</span>
+      <span>:</span>
+      <span>${m}</span>
+      <span>:</span>
+      <span class="seconds">${s}</span>
+    `;
 
     const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     dateDiv.textContent = now.toLocaleDateString(undefined, dateOptions);
 
-    timeStr.split('').forEach((num, idx) => {
-      const container = digits[idx];
-      const [current, next] = container.querySelectorAll('span');
-      if (current.textContent !== num) {
-        next.textContent = num;
-        next.style.transform = 'translateY(100%)';
-        requestAnimationFrame(() => {
-          current.style.transform = 'translateY(-100%)';
-          next.style.transform = 'translateY(0)';
-        });
-        setTimeout(() => {
-          current.textContent = num;
-          current.style.transform = 'translateY(0)';
-        }, 400);
+    // calculate how many segments should be visible
+    const totalMinutes = now.getHours() * 60 + now.getMinutes();
+    const passedSegments = Math.floor(totalMinutes / 30);
+
+    segments.forEach((seg, idx) => {
+      if (idx < passedSegments) {
+        seg.classList.add('visible');
+      } else {
+        seg.classList.remove('visible');
       }
     });
   }
