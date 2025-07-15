@@ -55,16 +55,21 @@ body {
   color: #222;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 2px 4px;
 }
 
 .segment .task {
-  background: rgba(255,255,255,0.8);
-  padding: 2px 4px;
   margin: 1px 0;
-  border-radius: 3px;
-  text-align: center;
+  text-align: left;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.segment .task input {
+  margin-right: 4px;
+  pointer-events: auto;
 }
 
 #clock-container {
@@ -75,6 +80,7 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  pointer-events: none;
 }
 
 #clock {
@@ -91,10 +97,6 @@ body {
   bottom: 10px;
   font-size: 1rem;
   color: #555;
-}
-
-button {
-  margin-top: 10px;
 }
 </style>
 </head>
@@ -180,7 +182,7 @@ function updateClock() {
 
   segments.forEach((seg, idx) => {
     seg.style.background = idx < passedSegments
-      ? 'rgba(255,0,0,0.05)' : 'transparent';
+      ? 'rgba(255,0,0,0.1)' : 'transparent';
   });
 }
 updateClock();
@@ -204,10 +206,17 @@ function loadTasks() {
       const [name, status, createdAt] = row;
       if (!createdAt || !name) return;
 
-      const [datePart, timePart] = createdAt.split(' ');
+      const parts = createdAt.trim().split(' ');
+      if (parts.length < 2) return;
+
+      const [datePart, timePart] = parts;
       if (datePart !== todayStr) return;
 
-      const [hour, minute] = timePart.split(':').map(Number);
+      const [hourStr, minuteStr] = timePart.split(':');
+      const hour = parseInt(hourStr);
+      const minute = parseInt(minuteStr);
+      if (isNaN(hour) || isNaN(minute)) return;
+
       const segmentIndex = Math.floor((hour * 60 + minute) / 30);
       if (!segments[segmentIndex]) return;
 
@@ -219,8 +228,9 @@ function loadTasks() {
       checkbox.onchange = () => updateTask(idx + 2, checkbox.checked ? '✅' : '❌');
       taskDiv.appendChild(checkbox);
       taskDiv.append(name);
+
       segments[segmentIndex].appendChild(taskDiv);
-      segments[segmentIndex].style.background = 'rgba(255,0,0,0.05)';
+      segments[segmentIndex].style.background = 'rgba(255,0,0,0.1)';
     });
   })
   .catch(err => console.error(err));
@@ -247,6 +257,14 @@ function updateTask(rowNumber, status) {
   .then(() => loadTasks())
   .catch(err => console.error(err));
 }
+
+document.addEventListener('fullscreenchange', () => {
+  if (document.fullscreenElement) {
+    credentialsDiv.style.display = 'none';
+  } else {
+    credentialsDiv.style.display = '';
+  }
+});
 </script>
 
 </body>
