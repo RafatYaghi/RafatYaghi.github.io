@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>✅ Tasks with Start Date & Persistent Sign-In</title>
+<title>✅ Tasks with Start Date & Persistent Sign-In & Date Navigation</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 body {
@@ -66,11 +66,21 @@ button:hover {
   margin: 10px 0;
   color: #555;
 }
+#dateNav {
+  text-align: center;
+  margin: 10px 0;
+}
 </style>
 </head>
 <body>
 
 <h1>📋 My Tasks</h1>
+
+<div id="dateNav" style="display:none;">
+  <button id="prevDayBtn">⬅️ Previous Day</button>
+  <span id="currentDateDisplay"></span>
+  <button id="nextDayBtn">➡️ Next Day</button>
+</div>
 
 <div id="credentials">
   <p>Enter your Google OAuth Client ID & Google Sheet ID:</p>
@@ -115,6 +125,12 @@ const taskInput = document.getElementById('taskInput');
 const startDateInput = document.getElementById('startDateInput');
 const addTaskBtn = document.getElementById('addTaskBtn');
 const newTaskDiv = document.getElementById('newTask');
+const dateNav = document.getElementById('dateNav');
+const prevDayBtn = document.getElementById('prevDayBtn');
+const nextDayBtn = document.getElementById('nextDayBtn');
+const currentDateDisplay = document.getElementById('currentDateDisplay');
+
+let viewedDate = new Date();
 
 if (localStorage.getItem('clientId')) clientIdInput.value = localStorage.getItem('clientId');
 if (localStorage.getItem('sheetId')) sheetIdInput.value = localStorage.getItem('sheetId');
@@ -136,6 +152,8 @@ startBtn.onclick = () => {
     authorizeBtn.style.display = 'none';
     signoutBtn.style.display = 'inline-block';
     newTaskDiv.style.display = 'block';
+    dateNav.style.display = 'block';
+    viewedDate = new Date();
     loadTasks();
   }
 };
@@ -153,6 +171,8 @@ function initClient() {
       authorizeBtn.style.display = 'none';
       signoutBtn.style.display = 'inline-block';
       newTaskDiv.style.display = 'block';
+      dateNav.style.display = 'block';
+      viewedDate = new Date();
       loadTasks();
     }
   });
@@ -168,11 +188,15 @@ function revokeToken() {
       signoutBtn.style.display = 'none';
       tasksEl.innerHTML = '';
       newTaskDiv.style.display = 'none';
+      dateNav.style.display = 'none';
     });
   }
 }
 
 function loadTasks() {
+  const todayStr = viewedDate.toISOString().split('T')[0];
+  currentDateDisplay.textContent = viewedDate.toLocaleDateString();
+
   statusDiv.textContent = 'Loading tasks...';
   fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${RANGE}`, {
     headers: { Authorization: `Bearer ${accessToken}` }
@@ -181,12 +205,20 @@ function loadTasks() {
   .then(data => {
     tasksEl.innerHTML = '';
     const rows = data.values || [];
-    if (!rows.length) {
-      statusDiv.textContent = 'No tasks found.';
+    const filteredRows = rows.filter(row => {
+      const createdAt = row[2];
+      if (!createdAt) return false;
+      const datePart = createdAt.trim().split(' ')[0];
+      return datePart === todayStr;
+    });
+
+    if (!filteredRows.length) {
+      statusDiv.textContent = 'No tasks for this date.';
       return;
     }
+
     statusDiv.textContent = '';
-    rows.forEach((row, idx) => {
+    filteredRows.forEach((row, idx) => {
       const li = document.createElement('li');
       li.className = 'task';
       const checkbox = document.createElement('input');
@@ -218,19 +250,13 @@ function getTimestamp() {
 
 function updateTask(rowNumber, status) {
   const timestamp = status === '✅' ? getTimestamp() : '';
-
-  // fetch current Created At value from the sheet
   fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!C${rowNumber}:C${rowNumber}`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   })
   .then(res => res.json())
   .then(data => {
     const createdAt = (data.values && data.values[0] && data.values[0][0]) || getTimestamp();
-
-    const body = {
-      values: [[status, createdAt, timestamp]]
-    };
-
+    const body = { values: [[status, createdAt, timestamp]] };
     return fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!B${rowNumber}:D${rowNumber}?valueInputOption=RAW`, {
       method: 'PUT',
       headers: {
@@ -240,7 +266,6 @@ function updateTask(rowNumber, status) {
       body: JSON.stringify(body)
     });
   })
-  .then(res => res.json())
   .then(() => {
     statusDiv.textContent = 'Task updated.';
     loadTasks();
@@ -250,7 +275,6 @@ function updateTask(rowNumber, status) {
     console.error(err);
   });
 }
-
 
 addTaskBtn.onclick = () => {
   const taskDesc = taskInput.value.trim();
@@ -272,7 +296,6 @@ addTaskBtn.onclick = () => {
     },
     body: JSON.stringify(body)
   })
-  .then(res => res.json())
   .then(() => {
     taskInput.value = '';
     startDateInput.value = '';
@@ -283,7 +306,17 @@ addTaskBtn.onclick = () => {
     statusDiv.textContent = 'Error adding task.';
     console.error(err);
   });
-}
+};
+
+prevDayBtn.onclick = () => {
+  viewedDate.setDate(viewedDate.getDate() - 1);
+  loadTasks();
+};
+
+nextDayBtn.onclick = () => {
+  viewedDate.setDate(viewedDate.getDate() + 1);
+  loadTasks();
+};
 
 // Auto-start if saved
 if (clientIdInput.value && sheetIdInput.value) {
