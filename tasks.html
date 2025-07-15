@@ -209,7 +209,7 @@ function fetchTasks() {
 
 function showTasksForDate(date) {
   tasksEl.innerHTML = '';
-  const todayStr = date.toISOString().split('T')[0];
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   currentDateDisplay.textContent = date.toLocaleDateString();
 
   const rows = allRows
@@ -217,8 +217,10 @@ function showTasksForDate(date) {
     .filter(({ row }) => {
       const createdAt = row[2];
       if (!createdAt) return false;
-      const datePart = createdAt.split(' ')[0];
-      return datePart === todayStr;
+	const [y, m, d] = createdAt.split(' ')[0].split('-').map(Number);
+	const created = new Date(y, m - 1, d);
+
+	return created.getTime() === target.getTime();
     });
 
   if (!rows.length) {
