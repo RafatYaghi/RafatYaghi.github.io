@@ -61,14 +61,18 @@ body {
 }
 
 .segment .task {
-  margin: 1px 0;
+  margin: 2px 0;
   text-align: left;
   pointer-events: auto;
   cursor: pointer;
+  font-size: 0.65rem;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .segment .task input {
-  margin-right: 4px;
   pointer-events: auto;
 }
 
@@ -94,9 +98,27 @@ body {
 
 #date {
   position: absolute;
-  bottom: 10px;
+  bottom: 40px;
   font-size: 1rem;
   color: #555;
+}
+
+#fullscreenBtn {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #007ACC;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 2;
+}
+#fullscreenBtn:hover {
+  background: #005f99;
 }
 </style>
 </head>
@@ -115,6 +137,8 @@ body {
   <div id="date"></div>
 </div>
 
+<button id="fullscreenBtn">⛶ Toggle Fullscreen</button>
+
 <script>
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 const RANGE = 'Sheet1!A2:D';
@@ -129,6 +153,7 @@ const progress = document.getElementById('progress');
 const segments = [];
 const clock = document.getElementById('clock');
 const dateDiv = document.getElementById('date');
+const fullscreenBtn = document.getElementById('fullscreenBtn');
 
 for (let i = 0; i < 48; i++) {
   const seg = document.createElement('div');
@@ -258,11 +283,21 @@ function updateTask(rowNumber, status) {
   .catch(err => console.error(err));
 }
 
+fullscreenBtn.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+});
+
 document.addEventListener('fullscreenchange', () => {
   if (document.fullscreenElement) {
     credentialsDiv.style.display = 'none';
+    fullscreenBtn.style.display = 'none';
   } else {
     credentialsDiv.style.display = '';
+    fullscreenBtn.style.display = 'inline-block';
   }
 });
 </script>
