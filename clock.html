@@ -6,117 +6,127 @@
 <title>📋 Tasks on Segments Grid</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
-  body {
-    margin: 0;
-    height: 100vh;
-    background: #f7f7f7;
-    font-family: Arial, sans-serif;
-    overflow: hidden;
-    position: relative;
-  }
+body {
+  margin: 0;
+  height: 100vh;
+  background: #f7f7f7;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
+  position: relative;
+}
 
-  #progress {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    grid-template-rows: repeat(6, 1fr);
-    gap: 2px;
-    z-index: 0;
-    padding: 5px;
-    box-sizing: border-box;
-  }
+#credentials {
+  position: absolute;
+  z-index: 2;
+  background: #fff;
+  padding: 10px;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 4px;
+  box-shadow: 0 0 4px rgba(0,0,0,0.2);
+}
 
-  .segment {
-    background: transparent;
-    transition: background 0.3s;
-    position: relative;
-    overflow: hidden;
-    font-size: 0.7rem;
-    color: #222;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-  }
+#credentials input {
+  margin: 5px;
+  width: 200px;
+}
 
-  .segment .task {
-    background: rgba(255,255,255,0.8);
-    padding: 2px 4px;
-    margin: 1px 0;
-    border-radius: 3px;
-    text-align: center;
-  }
+#progress {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 2px;
+  z-index: 0;
+  padding: 5px;
+  box-sizing: border-box;
+}
 
-  #clock-container {
-    position: relative;
-    z-index: 1;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-  }
+.segment {
+  background: transparent;
+  transition: background 0.3s;
+  position: relative;
+  overflow: hidden;
+  font-size: 0.7rem;
+  color: #222;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
 
-  #clock {
-    font-size: 10vw;
-    font-weight: 900;
-    color: #333;
-    display: flex;
-    gap: 0.3em;
-    line-height: 1;
-  }
+.segment .task {
+  background: rgba(255,255,255,0.8);
+  padding: 2px 4px;
+  margin: 1px 0;
+  border-radius: 3px;
+  text-align: center;
+}
 
-  .seconds {
-    color: #888;
-  }
+#clock-container {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
 
-  button {
-    margin-top: 20px;
-    padding: 10px 20px;
-    font-size: 1rem;
-    cursor: pointer;
-    z-index: 2;
-  }
+#clock {
+  font-size: 8vw;
+  font-weight: 900;
+  color: #333;
+  display: flex;
+  gap: 0.3em;
+  line-height: 1;
+}
 
-  #date {
-    position: absolute;
-    bottom: 20px;
-    font-size: 1.2rem;
-    color: #555;
-  }
+#date {
+  position: absolute;
+  bottom: 10px;
+  font-size: 1rem;
+  color: #555;
+}
 
-  .task input {
-    margin-right: 4px;
-  }
+button {
+  margin-top: 10px;
+}
 </style>
 </head>
 <body>
+
+<div id="credentials">
+  <input type="text" id="clientIdInput" placeholder="Google OAuth Client ID">
+  <input type="text" id="sheetIdInput" placeholder="Google Sheet ID">
+  <button id="startBtn">Start</button>
+</div>
 
 <div id="progress"></div>
 
 <div id="clock-container">
   <div id="clock"></div>
-  <button id="fullscreen">Toggle Fullscreen</button>
   <div id="date"></div>
 </div>
 
 <script>
-const sheetId = prompt("Enter your Google Sheet ID:");
-const clientId = prompt("Enter your Google OAuth Client ID:");
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 const RANGE = 'Sheet1!A2:D';
-let accessToken = null;
+let accessToken = null, clientId = '', sheetId = '';
+let tokenClient;
 
-const clock = document.getElementById('clock');
-const dateDiv = document.getElementById('date');
-const btn = document.getElementById('fullscreen');
+const credentialsDiv = document.getElementById('credentials');
+const clientIdInput = document.getElementById('clientIdInput');
+const sheetIdInput = document.getElementById('sheetIdInput');
+const startBtn = document.getElementById('startBtn');
 const progress = document.getElementById('progress');
 const segments = [];
-
-const todayStr = new Date().toISOString().split('T')[0];
+const clock = document.getElementById('clock');
+const dateDiv = document.getElementById('date');
 
 for (let i = 0; i < 48; i++) {
   const seg = document.createElement('div');
@@ -125,54 +135,63 @@ for (let i = 0; i < 48; i++) {
   segments.push(seg);
 }
 
+if (localStorage.clientId) clientIdInput.value = localStorage.clientId;
+if (localStorage.sheetId) sheetIdInput.value = localStorage.sheetId;
+
+startBtn.onclick = () => {
+  clientId = clientIdInput.value.trim();
+  sheetId = sheetIdInput.value.trim();
+  if (!clientId || !sheetId) {
+    alert("Please enter both Client ID & Sheet ID");
+    return;
+  }
+  localStorage.clientId = clientId;
+  localStorage.sheetId = sheetId;
+  credentialsDiv.style.display = 'none';
+  initOAuth();
+};
+
+function initOAuth() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: SCOPES,
+    callback: (resp) => {
+      accessToken = resp.access_token;
+      loadTasks();
+      setInterval(loadTasks, 60 * 1000);
+    }
+  });
+  tokenClient.requestAccessToken();
+}
+
 function updateClock() {
   const now = new Date();
   const h = String(now.getHours()).padStart(2, '0');
   const m = String(now.getMinutes()).padStart(2, '0');
   const s = String(now.getSeconds()).padStart(2, '0');
 
-  clock.innerHTML = `
-    <span>${h}</span><span>:</span><span>${m}</span><span>:</span><span class="seconds">${s}</span>
-  `;
+  clock.innerHTML = `${h}:${m}:<span style="color:#888">${s}</span>`;
 
   const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   dateDiv.textContent = now.toLocaleDateString(undefined, dateOptions);
-}
 
+  const totalMinutes = now.getHours() * 60 + now.getMinutes();
+  const passedSegments = Math.floor(totalMinutes / 30);
+
+  segments.forEach((seg, idx) => {
+    seg.style.background = idx < passedSegments
+      ? 'rgba(255,0,0,0.05)' : 'transparent';
+  });
+}
 updateClock();
 setInterval(updateClock, 1000);
 
-btn.addEventListener('click', () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
-});
-
-document.addEventListener('fullscreenchange', () => {
-  btn.style.display = document.fullscreenElement ? 'none' : 'inline-block';
-});
-
-function initOAuth() {
-  google.accounts.oauth2.initTokenClient({
-    client_id: clientId,
-    scope: SCOPES,
-    callback: (resp) => {
-      accessToken = resp.access_token;
-      loadTasks();
-    }
-  }).requestAccessToken();
-}
-
 function clearSegments() {
-  segments.forEach(seg => {
-    seg.innerHTML = '';
-    seg.style.background = 'transparent';
-  });
+  segments.forEach(seg => seg.innerHTML = '');
 }
 
 function loadTasks() {
+  const todayStr = new Date().toISOString().split('T')[0];
   fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${RANGE}`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   })
@@ -183,14 +202,14 @@ function loadTasks() {
 
     rows.forEach((row, idx) => {
       const [name, status, createdAt] = row;
-      if (!createdAt) return;
+      if (!createdAt || !name) return;
 
-      const createdDate = createdAt.split(' ')[0];
-      if (createdDate !== todayStr) return;
+      const [datePart, timePart] = createdAt.split(' ');
+      if (datePart !== todayStr) return;
 
-      const [hour, minute] = createdAt.split(' ')[1].split(':');
-      const totalMinutes = parseInt(hour) * 60 + parseInt(minute);
-      const segmentIndex = Math.floor(totalMinutes / 30);
+      const [hour, minute] = timePart.split(':').map(Number);
+      const segmentIndex = Math.floor((hour * 60 + minute) / 30);
+      if (!segments[segmentIndex]) return;
 
       const taskDiv = document.createElement('div');
       taskDiv.className = 'task';
@@ -201,15 +220,14 @@ function loadTasks() {
       taskDiv.appendChild(checkbox);
       taskDiv.append(name);
       segments[segmentIndex].appendChild(taskDiv);
-      segments[segmentIndex].style.background = 'rgba(255, 0, 0, 0.05)';
+      segments[segmentIndex].style.background = 'rgba(255,0,0,0.05)';
     });
-  });
+  })
+  .catch(err => console.error(err));
 }
 
 function updateTask(rowNumber, status) {
   const timestamp = status === '✅' ? new Date().toISOString().replace('T',' ').substring(0,19) : '';
-
-  // fetch existing Created At
   fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!C${rowNumber}:C${rowNumber}`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   })
@@ -217,7 +235,6 @@ function updateTask(rowNumber, status) {
   .then(data => {
     const createdAt = (data.values && data.values[0] && data.values[0][0]) || '';
     const body = { values: [[status, createdAt, timestamp]] };
-
     return fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!B${rowNumber}:D${rowNumber}?valueInputOption=RAW`, {
       method: 'PUT',
       headers: {
@@ -230,9 +247,6 @@ function updateTask(rowNumber, status) {
   .then(() => loadTasks())
   .catch(err => console.error(err));
 }
-
-initOAuth();
-setInterval(loadTasks, 60 * 1000); // refresh every minute
 </script>
 
 </body>
