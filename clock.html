@@ -13,16 +13,34 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    font-family: sans-serif;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
   }
 
   #clock {
     font-size: 10vw;
+    font-weight: 900;
     color: #333;
+    display: flex;
+    gap: 0.2em;
   }
 
   #clock .seconds {
     color: #bbb;
+  }
+
+  .digit {
+    display: inline-block;
+    position: relative;
+    overflow: hidden;
+    height: 1em;
+  }
+
+  .digit span {
+    display: block;
+    position: absolute;
+    width: 100%;
+    transition: transform 0.4s ease-in-out;
   }
 
   button {
@@ -30,6 +48,14 @@
     padding: 10px 20px;
     font-size: 1rem;
     cursor: pointer;
+    z-index: 2;
+  }
+
+  #date {
+    position: absolute;
+    bottom: 20px;
+    font-size: 1.2rem;
+    color: #555;
   }
 </style>
 </head>
@@ -37,25 +63,83 @@
 
 <div id="clock"></div>
 <button id="fullscreen">Toggle Fullscreen</button>
+<div id="date"></div>
 
 <script>
+  const clock = document.getElementById('clock');
+  const dateDiv = document.getElementById('date');
+  const btn = document.getElementById('fullscreen');
+
+  function createDigitContainer() {
+    const container = document.createElement('div');
+    container.className = 'digit';
+    const span1 = document.createElement('span');
+    const span2 = document.createElement('span');
+    container.appendChild(span1);
+    container.appendChild(span2);
+    return container;
+  }
+
+  const digits = [];
+
+  // build initial structure
+  for (let i = 0; i < 8; i++) {
+    if (i === 2 || i === 5) {
+      const colon = document.createElement('span');
+      colon.textContent = ':';
+      colon.style.margin = '0 0.1em';
+      clock.appendChild(colon);
+    } else {
+      const container = createDigitContainer();
+      digits.push(container);
+      clock.appendChild(container);
+    }
+  }
+
   function updateClock() {
     const now = new Date();
     const h = String(now.getHours()).padStart(2, '0');
     const m = String(now.getMinutes()).padStart(2, '0');
     const s = String(now.getSeconds()).padStart(2, '0');
-    document.getElementById('clock').innerHTML =
-      `<span>${h}</span>:<span>${m}</span>:<span class="seconds">${s}</span>`;
+    const timeStr = h + m + s;
+
+    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    dateDiv.textContent = now.toLocaleDateString(undefined, dateOptions);
+
+    timeStr.split('').forEach((num, idx) => {
+      const container = digits[idx];
+      const [current, next] = container.querySelectorAll('span');
+      if (current.textContent !== num) {
+        next.textContent = num;
+        next.style.transform = 'translateY(100%)';
+        requestAnimationFrame(() => {
+          current.style.transform = 'translateY(-100%)';
+          next.style.transform = 'translateY(0)';
+        });
+        setTimeout(() => {
+          current.textContent = num;
+          current.style.transform = 'translateY(0)';
+        }, 400);
+      }
+    });
   }
 
   updateClock();
   setInterval(updateClock, 1000);
 
-  document.getElementById('fullscreen').addEventListener('click', () => {
+  btn.addEventListener('click', () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
     } else {
       document.exitFullscreen();
+    }
+  });
+
+  document.addEventListener('fullscreenchange', () => {
+    if (document.fullscreenElement) {
+      btn.style.display = 'none';
+    } else {
+      btn.style.display = 'inline-block';
     }
   });
 </script>
