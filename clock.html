@@ -171,6 +171,25 @@ body.dark #controls {
   <button id="addTaskBtn">➕ Add Task</button>
 
 </div>
+<div id="addTaskModal" style="
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  background:white;
+  padding:20px;
+  box-shadow:0 0 10px rgba(0,0,0,0.3);
+  z-index:10;
+  display:none;
+  border-radius:6px;
+">
+  <h3>Add New Task</h3>
+  <input type="text" id="taskInput" placeholder="Task description" style="width:100%;margin:5px 0;padding:5px;">
+  <input type="datetime-local" id="startDateInput" style="width:100%;margin:5px 0;padding:5px;">
+  <button id="saveTaskBtn">✅ Save</button>
+  <button id="cancelTaskBtn">❌ Cancel</button>
+</div>
+
 
 <script>
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
@@ -434,24 +453,6 @@ saveTaskBtn.onclick = () => {
 };
 
 </script>
-<div id="addTaskModal" style="
-  position:fixed;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  background:white;
-  padding:20px;
-  box-shadow:0 0 10px rgba(0,0,0,0.3);
-  z-index:10;
-  display:none;
-  border-radius:6px;
-">
-  <h3>Add New Task</h3>
-  <input type="text" id="taskInput" placeholder="Task description" style="width:100%;margin:5px 0;padding:5px;">
-  <input type="datetime-local" id="startDateInput" style="width:100%;margin:5px 0;padding:5px;">
-  <button id="saveTaskBtn">✅ Save</button>
-  <button id="cancelTaskBtn">❌ Cancel</button>
-</div>
 
 
 </body>
