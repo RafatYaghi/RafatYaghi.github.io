@@ -3,46 +3,74 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>✅ Tasks with Timestamps & Add</title>
+<title>✅ Tasks with Timestamps & Add (Improved)</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 body {
   font-family: Arial, sans-serif;
-  max-width: 600px;
+  max-width: 700px;
   margin: 20px auto;
-  background: #f9f9f9;
+  background: #f4f4f9;
   padding: 20px;
-  border-radius: 5px;
+  border-radius: 8px;
+}
+h1 {
+  text-align: center;
+  color: #333;
 }
 .task {
   background: #fff;
-  margin: 5px 0;
+  margin: 8px 0;
   padding: 10px;
-  border: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-left: 4px solid #007ACC;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-.task input { margin-right: 10px; }
-#credentials {
+.task .info {
+  flex: 1;
+  margin-left: 10px;
+}
+.task input[type="checkbox"] {
+  transform: scale(1.2);
+}
+#credentials, #newTask {
   background: #fff;
   padding: 15px;
   margin-bottom: 20px;
-  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
-#credentials input {
-  width: 100%;
+#credentials input, #newTask input {
+  width: calc(100% - 10px);
   margin-bottom: 10px;
-  padding: 5px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
-#newTask {
-  margin-top: 20px;
-  background: #fff;
-  padding: 10px;
-  border: 1px solid #ddd;
+button {
+  background-color: #007ACC;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  margin: 4px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+button:hover {
+  background-color: #005f99;
+}
+#status {
+  text-align: center;
+  margin: 10px 0;
+  color: #555;
 }
 </style>
 </head>
 <body>
 
-<h1>📋 My Tasks (with Timestamps & Add)</h1>
+<h1>📋 My Tasks</h1>
 
 <div id="credentials">
   <p>Enter your Google OAuth Client ID & Google Sheet ID:</p>
@@ -52,8 +80,8 @@ body {
 </div>
 
 <div>
-  <button id="authorizeBtn" style="display:none;">Sign in with Google</button>
-  <button id="signoutBtn" style="display:none;">Sign out</button>
+  <button id="authorizeBtn" style="display:none;">🔑 Sign in with Google</button>
+  <button id="signoutBtn" style="display:none;">🚪 Sign out</button>
 </div>
 
 <div id="status"></div>
@@ -61,7 +89,7 @@ body {
 <div id="newTask" style="display:none;">
   <h3>Add New Task</h3>
   <input type="text" id="taskInput" placeholder="New task description">
-  <button id="addTaskBtn">Add Task</button>
+  <button id="addTaskBtn">➕ Add Task</button>
 </div>
 
 <ul id="tasks"></ul>
@@ -86,6 +114,11 @@ const taskInput = document.getElementById('taskInput');
 const addTaskBtn = document.getElementById('addTaskBtn');
 const newTaskDiv = document.getElementById('newTask');
 
+if (localStorage.getItem('clientId') && localStorage.getItem('sheetId')) {
+  clientIdInput.value = localStorage.getItem('clientId');
+  sheetIdInput.value = localStorage.getItem('sheetId');
+}
+
 startBtn.onclick = () => {
   clientId = clientIdInput.value.trim();
   sheetId = sheetIdInput.value.trim();
@@ -93,6 +126,8 @@ startBtn.onclick = () => {
     alert("Please enter both Client ID and Sheet ID.");
     return;
   }
+  localStorage.setItem('clientId', clientId);
+  localStorage.setItem('sheetId', sheetId);
   initClient();
   document.getElementById('credentials').style.display = 'none';
   authorizeBtn.style.display = 'inline-block';
@@ -150,9 +185,15 @@ function loadTasks() {
       checkbox.checked = row[1] === '✅';
       checkbox.onchange = () => updateTask(idx + 2, checkbox.checked ? '✅' : '❌');
       li.appendChild(checkbox);
-      const text = document.createElement('span');
-      text.innerHTML = `<strong>${row[0]}</strong> | Created: ${row[2] || '-'} | Completed: ${row[3] || '-'}`;
-      li.appendChild(text);
+
+      const info = document.createElement('div');
+      info.className = 'info';
+      info.innerHTML = `
+        <strong>${row[0]}</strong><br>
+        <small>📅 Created: ${row[2] || '-'}</small><br>
+        <small>✅ Completed: ${row[3] || '-'}</small>
+      `;
+      li.appendChild(info);
       tasksEl.appendChild(li);
     });
   })
@@ -169,9 +210,9 @@ function getTimestamp() {
 function updateTask(rowNumber, status) {
   const timestamp = status === '✅' ? getTimestamp() : '';
   const body = {
-    values: [[status, timestamp]]
+    values: [[status, '', timestamp]]
   };
-  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!B${rowNumber}:C${rowNumber}?valueInputOption=RAW`, {
+  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!B${rowNumber}:D${rowNumber}?valueInputOption=RAW`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -218,6 +259,11 @@ addTaskBtn.onclick = () => {
     statusDiv.textContent = 'Error adding task.';
     console.error(err);
   });
+}
+
+// Auto-fill & init if already saved
+if (clientIdInput.value && sheetIdInput.value) {
+  startBtn.click();
 }
 </script>
 
