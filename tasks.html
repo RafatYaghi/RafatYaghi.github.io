@@ -3,44 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>✅ Tasks with Google OAuth (Dynamic IDs)</title>
+<title>✅ Tasks with Timestamps & Add</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    max-width: 600px;
-    margin: 20px auto;
-    background: #f9f9f9;
-    padding: 20px;
-    border-radius: 5px;
-  }
-  .task {
-    background: #fff;
-    margin: 5px 0;
-    padding: 10px;
-    display: flex;
-    align-items: center;
-    border: 1px solid #ddd;
-  }
-  .task input {
-    margin-right: 10px;
-  }
-  #credentials {
-    background: #fff;
-    padding: 15px;
-    margin-bottom: 20px;
-    border: 1px solid #ddd;
-  }
-  #credentials input {
-    width: 100%;
-    margin-bottom: 10px;
-    padding: 5px;
-  }
+body {
+  font-family: Arial, sans-serif;
+  max-width: 600px;
+  margin: 20px auto;
+  background: #f9f9f9;
+  padding: 20px;
+  border-radius: 5px;
+}
+.task {
+  background: #fff;
+  margin: 5px 0;
+  padding: 10px;
+  border: 1px solid #ddd;
+}
+.task input { margin-right: 10px; }
+#credentials {
+  background: #fff;
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+}
+#credentials input {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 5px;
+}
+#newTask {
+  margin-top: 20px;
+  background: #fff;
+  padding: 10px;
+  border: 1px solid #ddd;
+}
 </style>
 </head>
 <body>
 
-<h1>📋 My Tasks (with OAuth)</h1>
+<h1>📋 My Tasks (with Timestamps & Add)</h1>
 
 <div id="credentials">
   <p>Enter your Google OAuth Client ID & Google Sheet ID:</p>
@@ -55,11 +57,18 @@
 </div>
 
 <div id="status"></div>
+
+<div id="newTask" style="display:none;">
+  <h3>Add New Task</h3>
+  <input type="text" id="taskInput" placeholder="New task description">
+  <button id="addTaskBtn">Add Task</button>
+</div>
+
 <ul id="tasks"></ul>
 
 <script>
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
-const RANGE = 'Sheet1!A2:B';
+const RANGE = 'Sheet1!A2:D';
 
 let clientId = '';
 let sheetId = '';
@@ -73,16 +82,17 @@ const statusDiv = document.getElementById('status');
 const tasksEl = document.getElementById('tasks');
 const clientIdInput = document.getElementById('clientIdInput');
 const sheetIdInput = document.getElementById('sheetIdInput');
+const taskInput = document.getElementById('taskInput');
+const addTaskBtn = document.getElementById('addTaskBtn');
+const newTaskDiv = document.getElementById('newTask');
 
 startBtn.onclick = () => {
   clientId = clientIdInput.value.trim();
   sheetId = sheetIdInput.value.trim();
-
   if (!clientId || !sheetId) {
     alert("Please enter both Client ID and Sheet ID.");
     return;
   }
-
   initClient();
   document.getElementById('credentials').style.display = 'none';
   authorizeBtn.style.display = 'inline-block';
@@ -99,6 +109,7 @@ function initClient() {
       accessToken = tokenResponse.access_token;
       authorizeBtn.style.display = 'none';
       signoutBtn.style.display = 'inline-block';
+      newTaskDiv.style.display = 'block';
       loadTasks();
     }
   });
@@ -112,6 +123,7 @@ function revokeToken() {
       authorizeBtn.style.display = 'inline-block';
       signoutBtn.style.display = 'none';
       tasksEl.innerHTML = '';
+      newTaskDiv.style.display = 'none';
     });
   }
 }
@@ -138,7 +150,9 @@ function loadTasks() {
       checkbox.checked = row[1] === '✅';
       checkbox.onchange = () => updateTask(idx + 2, checkbox.checked ? '✅' : '❌');
       li.appendChild(checkbox);
-      li.appendChild(document.createTextNode(row[0]));
+      const text = document.createElement('span');
+      text.innerHTML = `<strong>${row[0]}</strong> | Created: ${row[2] || '-'} | Completed: ${row[3] || '-'}`;
+      li.appendChild(text);
       tasksEl.appendChild(li);
     });
   })
@@ -148,11 +162,16 @@ function loadTasks() {
   });
 }
 
+function getTimestamp() {
+  return new Date().toISOString().replace('T', ' ').substring(0, 19);
+}
+
 function updateTask(rowNumber, status) {
+  const timestamp = status === '✅' ? getTimestamp() : '';
   const body = {
-    values: [[status]]
+    values: [[status, timestamp]]
   };
-  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!B${rowNumber}:B${rowNumber}?valueInputOption=RAW`, {
+  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!B${rowNumber}:C${rowNumber}?valueInputOption=RAW`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -163,9 +182,40 @@ function updateTask(rowNumber, status) {
   .then(res => res.json())
   .then(() => {
     statusDiv.textContent = 'Task updated.';
+    loadTasks();
   })
   .catch(err => {
     statusDiv.textContent = 'Error updating task.';
+    console.error(err);
+  });
+}
+
+addTaskBtn.onclick = () => {
+  const taskDesc = taskInput.value.trim();
+  if (!taskDesc) {
+    alert("Please enter a task description.");
+    return;
+  }
+  const createdAt = getTimestamp();
+  const body = {
+    values: [[taskDesc, '❌', createdAt, '']]
+  };
+  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A2:D2:append?valueInputOption=RAW`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  })
+  .then(res => res.json())
+  .then(() => {
+    taskInput.value = '';
+    statusDiv.textContent = 'Task added.';
+    loadTasks();
+  })
+  .catch(err => {
+    statusDiv.textContent = 'Error adding task.';
     console.error(err);
   });
 }
