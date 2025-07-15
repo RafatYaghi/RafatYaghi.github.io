@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>✅ Tasks with Timestamps & Add (Improved)</title>
+<title>✅ Tasks with Start Date & Persistent Sign-In</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 body {
@@ -89,6 +89,7 @@ button:hover {
 <div id="newTask" style="display:none;">
   <h3>Add New Task</h3>
   <input type="text" id="taskInput" placeholder="New task description">
+  <input type="datetime-local" id="startDateInput" placeholder="Start date (optional)">
   <button id="addTaskBtn">➕ Add Task</button>
 </div>
 
@@ -111,13 +112,13 @@ const tasksEl = document.getElementById('tasks');
 const clientIdInput = document.getElementById('clientIdInput');
 const sheetIdInput = document.getElementById('sheetIdInput');
 const taskInput = document.getElementById('taskInput');
+const startDateInput = document.getElementById('startDateInput');
 const addTaskBtn = document.getElementById('addTaskBtn');
 const newTaskDiv = document.getElementById('newTask');
 
-if (localStorage.getItem('clientId') && localStorage.getItem('sheetId')) {
-  clientIdInput.value = localStorage.getItem('clientId');
-  sheetIdInput.value = localStorage.getItem('sheetId');
-}
+if (localStorage.getItem('clientId')) clientIdInput.value = localStorage.getItem('clientId');
+if (localStorage.getItem('sheetId')) sheetIdInput.value = localStorage.getItem('sheetId');
+if (localStorage.getItem('accessToken')) accessToken = localStorage.getItem('accessToken');
 
 startBtn.onclick = () => {
   clientId = clientIdInput.value.trim();
@@ -130,7 +131,13 @@ startBtn.onclick = () => {
   localStorage.setItem('sheetId', sheetId);
   initClient();
   document.getElementById('credentials').style.display = 'none';
-  authorizeBtn.style.display = 'inline-block';
+  if (!accessToken) authorizeBtn.style.display = 'inline-block';
+  else {
+    authorizeBtn.style.display = 'none';
+    signoutBtn.style.display = 'inline-block';
+    newTaskDiv.style.display = 'block';
+    loadTasks();
+  }
 };
 
 authorizeBtn.onclick = () => tokenClient.requestAccessToken();
@@ -142,6 +149,7 @@ function initClient() {
     scope: SCOPES,
     callback: (tokenResponse) => {
       accessToken = tokenResponse.access_token;
+      localStorage.setItem('accessToken', accessToken);
       authorizeBtn.style.display = 'none';
       signoutBtn.style.display = 'inline-block';
       newTaskDiv.style.display = 'block';
@@ -154,6 +162,7 @@ function revokeToken() {
   if (accessToken) {
     google.accounts.oauth2.revoke(accessToken, () => {
       accessToken = null;
+      localStorage.removeItem('accessToken');
       statusDiv.textContent = 'Signed out';
       authorizeBtn.style.display = 'inline-block';
       signoutBtn.style.display = 'none';
@@ -237,7 +246,9 @@ addTaskBtn.onclick = () => {
     alert("Please enter a task description.");
     return;
   }
-  const createdAt = getTimestamp();
+  let createdAt = startDateInput.value
+    ? startDateInput.value.replace('T', ' ')
+    : getTimestamp();
   const body = {
     values: [[taskDesc, '❌', createdAt, '']]
   };
@@ -252,6 +263,7 @@ addTaskBtn.onclick = () => {
   .then(res => res.json())
   .then(() => {
     taskInput.value = '';
+    startDateInput.value = '';
     statusDiv.textContent = 'Task added.';
     loadTasks();
   })
@@ -261,7 +273,7 @@ addTaskBtn.onclick = () => {
   });
 }
 
-// Auto-fill & init if already saved
+// Auto-start if saved
 if (clientIdInput.value && sheetIdInput.value) {
   startBtn.click();
 }
