@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Clock with Day Progress Grid</title>
+<title>📋 Tasks on Segments Grid</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   body {
     margin: 0;
@@ -31,10 +32,22 @@
   .segment {
     background: transparent;
     transition: background 0.3s;
+    position: relative;
+    overflow: hidden;
+    font-size: 0.7rem;
+    color: #222;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
   }
 
-  .segment.visible {
-    background: rgba(255, 0, 0, 0.1);
+  .segment .task {
+    background: rgba(255,255,255,0.8);
+    padding: 2px 4px;
+    margin: 1px 0;
+    border-radius: 3px;
+    text-align: center;
   }
 
   #clock-container {
@@ -74,6 +87,10 @@
     font-size: 1.2rem;
     color: #555;
   }
+
+  .task input {
+    margin-right: 4px;
+  }
 </style>
 </head>
 <body>
@@ -87,68 +104,135 @@
 </div>
 
 <script>
-  const clock = document.getElementById('clock');
-  const dateDiv = document.getElementById('date');
-  const btn = document.getElementById('fullscreen');
-  const progress = document.getElementById('progress');
+const sheetId = prompt("Enter your Google Sheet ID:");
+const clientId = prompt("Enter your Google OAuth Client ID:");
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+const RANGE = 'Sheet1!A2:D';
+let accessToken = null;
 
-  // create 48 segments in a grid
-  const segments = [];
-  for (let i = 0; i < 48; i++) {
-    const seg = document.createElement('div');
-    seg.className = 'segment';
-    progress.appendChild(seg);
-    segments.push(seg);
+const clock = document.getElementById('clock');
+const dateDiv = document.getElementById('date');
+const btn = document.getElementById('fullscreen');
+const progress = document.getElementById('progress');
+const segments = [];
+
+const todayStr = new Date().toISOString().split('T')[0];
+
+for (let i = 0; i < 48; i++) {
+  const seg = document.createElement('div');
+  seg.className = 'segment';
+  progress.appendChild(seg);
+  segments.push(seg);
+}
+
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+
+  clock.innerHTML = `
+    <span>${h}</span><span>:</span><span>${m}</span><span>:</span><span class="seconds">${s}</span>
+  `;
+
+  const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  dateDiv.textContent = now.toLocaleDateString(undefined, dateOptions);
+}
+
+updateClock();
+setInterval(updateClock, 1000);
+
+btn.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
   }
+});
 
-  function updateClock() {
-    const now = new Date();
-    const h = String(now.getHours()).padStart(2, '0');
-    const m = String(now.getMinutes()).padStart(2, '0');
-    const s = String(now.getSeconds()).padStart(2, '0');
+document.addEventListener('fullscreenchange', () => {
+  btn.style.display = document.fullscreenElement ? 'none' : 'inline-block';
+});
 
-    clock.innerHTML = `
-      <span>${h}</span>
-      <span>:</span>
-      <span>${m}</span>
-      <span>:</span>
-      <span class="seconds">${s}</span>
-    `;
+function initOAuth() {
+  google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: SCOPES,
+    callback: (resp) => {
+      accessToken = resp.access_token;
+      loadTasks();
+    }
+  }).requestAccessToken();
+}
 
-    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    dateDiv.textContent = now.toLocaleDateString(undefined, dateOptions);
+function clearSegments() {
+  segments.forEach(seg => {
+    seg.innerHTML = '';
+    seg.style.background = 'transparent';
+  });
+}
 
-    // calculate how many segments should be visible
-    const totalMinutes = now.getHours() * 60 + now.getMinutes();
-    const passedSegments = Math.floor(totalMinutes / 30);
+function loadTasks() {
+  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${RANGE}`, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  })
+  .then(res => res.json())
+  .then(data => {
+    clearSegments();
+    const rows = data.values || [];
 
-    segments.forEach((seg, idx) => {
-      if (idx < passedSegments) {
-        seg.classList.add('visible');
-      } else {
-        seg.classList.remove('visible');
-      }
+    rows.forEach((row, idx) => {
+      const [name, status, createdAt] = row;
+      if (!createdAt) return;
+
+      const createdDate = createdAt.split(' ')[0];
+      if (createdDate !== todayStr) return;
+
+      const [hour, minute] = createdAt.split(' ')[1].split(':');
+      const totalMinutes = parseInt(hour) * 60 + parseInt(minute);
+      const segmentIndex = Math.floor(totalMinutes / 30);
+
+      const taskDiv = document.createElement('div');
+      taskDiv.className = 'task';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = status === '✅';
+      checkbox.onchange = () => updateTask(idx + 2, checkbox.checked ? '✅' : '❌');
+      taskDiv.appendChild(checkbox);
+      taskDiv.append(name);
+      segments[segmentIndex].appendChild(taskDiv);
+      segments[segmentIndex].style.background = 'rgba(255, 0, 0, 0.05)';
     });
-  }
-
-  updateClock();
-  setInterval(updateClock, 1000);
-
-  btn.addEventListener('click', () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-    } else {
-      document.exitFullscreen();
-    }
   });
+}
 
-  document.addEventListener('fullscreenchange', () => {
-    if (document.fullscreenElement) {
-      btn.style.display = 'none';
-    } else {
-      btn.style.display = 'inline-block';
-    }
-  });
+function updateTask(rowNumber, status) {
+  const timestamp = status === '✅' ? new Date().toISOString().replace('T',' ').substring(0,19) : '';
+
+  // fetch existing Created At
+  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!C${rowNumber}:C${rowNumber}`, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  })
+  .then(res => res.json())
+  .then(data => {
+    const createdAt = (data.values && data.values[0] && data.values[0][0]) || '';
+    const body = { values: [[status, createdAt, timestamp]] };
+
+    return fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!B${rowNumber}:D${rowNumber}?valueInputOption=RAW`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+  })
+  .then(() => loadTasks())
+  .catch(err => console.error(err));
+}
+
+initOAuth();
+setInterval(loadTasks, 60 * 1000); // refresh every minute
 </script>
 
 </body>
