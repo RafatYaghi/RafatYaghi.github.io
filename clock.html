@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📋 Tasks on Segments Grid with Clock & Progress</title>
+<title>📋 Tasks Grid + Clock + Dark Mode + Notifications</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 body {
@@ -13,6 +13,11 @@ body {
   font-family: Arial, sans-serif;
   overflow: hidden;
   position: relative;
+  transition: background 0.3s, color 0.3s;
+}
+body.dark {
+  background: #222;
+  color: #ddd;
 }
 
 #credentials {
@@ -25,6 +30,10 @@ body {
   transform: translateX(-50%);
   border-radius: 4px;
   box-shadow: 0 0 4px rgba(0,0,0,0.2);
+}
+body.dark #credentials {
+  background: #333;
+  color: #ddd;
 }
 
 #credentials input {
@@ -59,6 +68,9 @@ body {
   align-items: flex-start;
   padding: 2px 4px;
 }
+body.dark .segment {
+  color: #ddd;
+}
 
 .segment .task {
   margin: 2px 0;
@@ -66,14 +78,9 @@ body {
   pointer-events: auto;
   cursor: pointer;
   font-size: 0.65rem;
-  color: #333;
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-.segment .task input {
-  pointer-events: auto;
 }
 
 #clock-container {
@@ -95,6 +102,9 @@ body {
   gap: 0.3em;
   line-height: 1;
 }
+body.dark #clock {
+  color: #ddd;
+}
 
 #date {
   position: absolute;
@@ -102,22 +112,39 @@ body {
   font-size: 1.2rem;
   color: #555;
 }
+body.dark #date {
+  color: #ccc;
+}
 
-#fullscreenBtn {
+#controls {
   position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 0;
+  right: 0;
+  background: rgba(255,255,255,0.9);
+  padding: 4px;
+  border-bottom-left-radius: 4px;
+  display: flex;
+  gap: 4px;
+  transition: opacity 0.3s;
+  z-index: 3;
+}
+body.dark #controls {
+  background: rgba(0,0,0,0.8);
+}
+#controls.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+#controls button {
   background: #007ACC;
   color: white;
   border: none;
-  padding: 6px 12px;
-  font-size: 0.9rem;
+  padding: 4px 6px;
+  font-size: 0.8rem;
   border-radius: 4px;
   cursor: pointer;
-  z-index: 2;
 }
-#fullscreenBtn:hover {
+#controls button:hover {
   background: #005f99;
 }
 </style>
@@ -137,7 +164,11 @@ body {
   <div id="date"></div>
 </div>
 
-<button id="fullscreenBtn">⛶ Toggle Fullscreen</button>
+<div id="controls">
+  <button id="fullscreenBtn">⛶ Fullscreen</button>
+  <button id="darkModeBtn">🌙 Dark</button>
+  <button id="notifyBtn">🔔 Notify: Off</button>
+</div>
 
 <script>
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
@@ -154,6 +185,11 @@ const segments = [];
 const clock = document.getElementById('clock');
 const dateDiv = document.getElementById('date');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
+const darkModeBtn = document.getElementById('darkModeBtn');
+const notifyBtn = document.getElementById('notifyBtn');
+const controls = document.getElementById('controls');
+
+let notifyOn = false;
 
 for (let i = 0; i < 48; i++) {
   const seg = document.createElement('div');
@@ -198,11 +234,7 @@ function updateClock() {
   const s = String(now.getSeconds()).padStart(2, '0');
 
   clock.innerHTML = `
-    <span>${h}</span>
-    <span>:</span>
-    <span>${m}</span>
-    <span>:</span>
-    <span style="color:#888">${s}</span>
+    <span>${h}</span>:<span>${m}</span>:<span style="color:#888">${s}</span>
   `;
 
   const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -227,8 +259,13 @@ function updateClock() {
           rgba(0,255,0,0.1) 100%
         )
       `;
+      if (notifyOn && !seg.notified && progressPercent < 5) {
+        new Notification("⏰ Task segment started!");
+        seg.notified = true;
+      }
     } else {
       seg.style.background = 'transparent';
+      seg.notified = false;
     }
   });
 }
@@ -304,23 +341,46 @@ function updateTask(rowNumber, status) {
   .catch(err => console.error(err));
 }
 
-fullscreenBtn.addEventListener('click', () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
-});
+// Controls
+fullscreenBtn.onclick = () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+};
 
+darkModeBtn.onclick = () => {
+  document.body.classList.toggle("dark");
+};
+
+notifyBtn.onclick = () => {
+  notifyOn = !notifyOn;
+  if (notifyOn) {
+    Notification.requestPermission();
+    notifyBtn.textContent = "🔔 Notify: On";
+  } else {
+    notifyBtn.textContent = "🔔 Notify: Off";
+  }
+};
+
+// Hover bar
 document.addEventListener('fullscreenchange', () => {
   if (document.fullscreenElement) {
     credentialsDiv.style.display = 'none';
-    fullscreenBtn.style.display = 'none';
+    controls.classList.add('hidden');
+    document.body.addEventListener('mousemove', revealControls);
   } else {
     credentialsDiv.style.display = '';
-    fullscreenBtn.style.display = 'inline-block';
+    controls.classList.remove('hidden');
+    document.body.removeEventListener('mousemove', revealControls);
   }
 });
+
+function revealControls(e) {
+  if (e.clientY < 50 && e.clientX > window.innerWidth - 150) {
+    controls.classList.remove('hidden');
+  } else {
+    controls.classList.add('hidden');
+  }
+}
 </script>
 
 </body>
