@@ -218,16 +218,27 @@ function getTimestamp() {
 
 function updateTask(rowNumber, status) {
   const timestamp = status === '✅' ? getTimestamp() : '';
-  const body = {
-    values: [[status, '', timestamp]]
-  };
-  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!B${rowNumber}:D${rowNumber}?valueInputOption=RAW`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body)
+
+  // fetch current Created At value from the sheet
+  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!C${rowNumber}:C${rowNumber}`, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  })
+  .then(res => res.json())
+  .then(data => {
+    const createdAt = (data.values && data.values[0] && data.values[0][0]) || getTimestamp();
+
+    const body = {
+      values: [[status, createdAt, timestamp]]
+    };
+
+    return fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!B${rowNumber}:D${rowNumber}?valueInputOption=RAW`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
   })
   .then(res => res.json())
   .then(() => {
@@ -239,6 +250,7 @@ function updateTask(rowNumber, status) {
     console.error(err);
   });
 }
+
 
 addTaskBtn.onclick = () => {
   const taskDesc = taskInput.value.trim();
