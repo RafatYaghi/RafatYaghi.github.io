@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>✅ Tasks with Google OAuth</title>
+<title>✅ Tasks with Google OAuth (Dynamic IDs)</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   body {
@@ -25,14 +25,32 @@
   .task input {
     margin-right: 10px;
   }
+  #credentials {
+    background: #fff;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+  }
+  #credentials input {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 5px;
+  }
 </style>
 </head>
 <body>
 
 <h1>📋 My Tasks (with OAuth)</h1>
 
+<div id="credentials">
+  <p>Enter your Google OAuth Client ID & Google Sheet ID:</p>
+  <input type="text" id="clientIdInput" placeholder="Google OAuth Client ID">
+  <input type="text" id="sheetIdInput" placeholder="Google Sheet ID">
+  <button id="startBtn">Start</button>
+</div>
+
 <div>
-  <button id="authorizeBtn">Sign in with Google</button>
+  <button id="authorizeBtn" style="display:none;">Sign in with Google</button>
   <button id="signoutBtn" style="display:none;">Sign out</button>
 </div>
 
@@ -40,24 +58,42 @@
 <ul id="tasks"></ul>
 
 <script>
-const SHEET_ID = 'YOUR_SHEET_ID_HERE';
-const RANGE = 'Sheet1!A2:B';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+const RANGE = 'Sheet1!A2:B';
 
+let clientId = '';
+let sheetId = '';
 let tokenClient;
 let accessToken = null;
 
+const startBtn = document.getElementById('startBtn');
 const authorizeBtn = document.getElementById('authorizeBtn');
 const signoutBtn = document.getElementById('signoutBtn');
 const statusDiv = document.getElementById('status');
 const tasksEl = document.getElementById('tasks');
+const clientIdInput = document.getElementById('clientIdInput');
+const sheetIdInput = document.getElementById('sheetIdInput');
+
+startBtn.onclick = () => {
+  clientId = clientIdInput.value.trim();
+  sheetId = sheetIdInput.value.trim();
+
+  if (!clientId || !sheetId) {
+    alert("Please enter both Client ID and Sheet ID.");
+    return;
+  }
+
+  initClient();
+  document.getElementById('credentials').style.display = 'none';
+  authorizeBtn.style.display = 'inline-block';
+};
 
 authorizeBtn.onclick = () => tokenClient.requestAccessToken();
 signoutBtn.onclick = () => revokeToken();
 
 function initClient() {
   tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: 'YOUR_CLIENT_ID_HERE',
+    client_id: clientId,
     scope: SCOPES,
     callback: (tokenResponse) => {
       accessToken = tokenResponse.access_token;
@@ -82,7 +118,7 @@ function revokeToken() {
 
 function loadTasks() {
   statusDiv.textContent = 'Loading tasks...';
-  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}`, {
+  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${RANGE}`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   })
   .then(res => res.json())
@@ -116,7 +152,7 @@ function updateTask(rowNumber, status) {
   const body = {
     values: [[status]]
   };
-  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!B${rowNumber}:B${rowNumber}?valueInputOption=RAW`, {
+  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!B${rowNumber}:B${rowNumber}?valueInputOption=RAW`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -133,8 +169,6 @@ function updateTask(rowNumber, status) {
     console.error(err);
   });
 }
-
-window.onload = () => initClient();
 </script>
 
 </body>
