@@ -169,6 +169,9 @@ body.dark #controls {
   <button id="darkModeBtn">🌙 Dark</button>
   <button id="notifyBtn">🔔 Notify: Off</button>
   <button id="addTaskBtn">➕ Add Task</button>
+  <button id="viewToggleBtn">📆 Year View</button>
+
+
 
 </div>
 <div id="addTaskModal" style="
@@ -192,6 +195,7 @@ body.dark #controls {
 
 
 <script>
+
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 const RANGE = 'Sheet1!A2:D';
 let accessToken = null, clientId = '', sheetId = '';
@@ -210,14 +214,25 @@ const darkModeBtn = document.getElementById('darkModeBtn');
 const notifyBtn = document.getElementById('notifyBtn');
 const controls = document.getElementById('controls');
 
+const viewToggleBtn = document.getElementById('viewToggleBtn');
+let isYearView = false;
+
 let notifyOn = false;
 
-for (let i = 0; i < 48; i++) {
-  const seg = document.createElement('div');
-  seg.className = 'segment';
-  progress.appendChild(seg);
-  segments.push(seg);
+function renderSegments() {
+  progress.innerHTML = '';
+  segments.length = 0;
+
+  const count = isYearView ? 365 : 48;
+
+  for (let i = 0; i < count; i++) {
+    const seg = document.createElement('div');
+    seg.className = 'segment';
+    progress.appendChild(seg);
+    segments.push(seg);
+  }
 }
+
 
 if (localStorage.clientId) clientIdInput.value = localStorage.clientId;
 if (localStorage.sheetId) sheetIdInput.value = localStorage.sheetId;
@@ -241,6 +256,7 @@ function initOAuth() {
     scope: SCOPES,
     callback: (resp) => {
       accessToken = resp.access_token;
+      renderSegments();
       loadTasks();
       setInterval(loadTasks, 60 * 1000);
     }
@@ -261,35 +277,58 @@ function updateClock() {
   const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   dateDiv.textContent = now.toLocaleDateString(undefined, dateOptions);
 
-  const totalMinutes = now.getHours() * 60 + now.getMinutes();
-  const passedSegments = Math.floor(totalMinutes / 30);
-  const minutesInSegment = totalMinutes % 30;
-  const secondsInSegment = minutesInSegment * 60 + now.getSeconds();
-  const progressPercent = (secondsInSegment / 1800) * 100;
+  if (!isYearView) {
+    // Day View
+    const totalMinutes = now.getHours() * 60 + now.getMinutes();
+    const passedSegments = Math.floor(totalMinutes / 30);
+    const minutesInSegment = totalMinutes % 30;
+    const secondsInSegment = minutesInSegment * 60 + now.getSeconds();
+    const progressPercent = (secondsInSegment / 1800) * 100;
 
-  segments.forEach((seg, idx) => {
-    if (idx < passedSegments) {
-      seg.style.background = 'rgba(255,0,0,0.1)';
-    } else if (idx === passedSegments) {
-      seg.style.background = `
-        linear-gradient(
-          to right,
-          rgba(255,0,0,0.2) 0%,
-          rgba(255,0,0,0.2) ${progressPercent}%,
-          rgba(0,255,0,0.1) ${progressPercent}%,
-          rgba(0,255,0,0.1) 100%
-        )
-      `;
-      if (notifyOn && !seg.notified && progressPercent < 5) {
-        new Notification("⏰ Task segment started!");
-        seg.notified = true;
+    segments.forEach((seg, idx) => {
+      if (idx < passedSegments) {
+        seg.style.background = 'rgba(255,0,0,0.1)';
+      } else if (idx === passedSegments) {
+        seg.style.background = `
+          linear-gradient(
+            to right,
+            rgba(255,0,0,0.2) 0%,
+            rgba(255,0,0,0.2) ${progressPercent}%,
+            rgba(0,255,0,0.1) ${progressPercent}%,
+            rgba(0,255,0,0.1) 100%
+          )
+        `;
+      } else {
+        seg.style.background = 'transparent';
       }
-    } else {
-      seg.style.background = 'transparent';
-      seg.notified = false;
-    }
-  });
+    });
+  } else {
+    // Year View
+    const start = new Date(now.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((now - start) / (1000 * 60 * 60 * 24)) + 1;
+    const totalSecondsToday = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+    const progressPercent = (totalSecondsToday / 86400) * 100;
+
+    segments.forEach((seg, idx) => {
+      if (idx + 1 < dayOfYear) {
+        seg.style.background = 'rgba(255,0,0,0.1)';
+      } else if (idx + 1 === dayOfYear) {
+        seg.style.background = `
+          linear-gradient(
+            to right,
+            rgba(255,0,0,0.2) 0%,
+            rgba(255,0,0,0.2) ${progressPercent}%,
+            rgba(0,255,0,0.1) ${progressPercent}%,
+            rgba(0,255,0,0.1) 100%
+          )
+        `;
+      } else {
+        seg.style.background = 'transparent';
+      }
+    });
+  }
 }
+
 updateClock();
 setInterval(updateClock, 1000);
 
@@ -451,6 +490,13 @@ saveTaskBtn.onclick = () => {
     alert("Failed to add task.");
   });
 };
+
+viewToggleBtn.onclick = () => {
+  isYearView = !isYearView;
+  viewToggleBtn.textContent = isYearView ? '📅 Day View' : '📆 Year View';
+  renderSegments();
+};
+
 
 </script>
 
