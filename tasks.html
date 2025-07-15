@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>✅ Tasks with Start Date & Persistent Sign-In & Date Navigation</title>
+<title>✅ Tasks with Date Navigation</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 body {
@@ -76,12 +76,6 @@ button:hover {
 
 <h1>📋 My Tasks</h1>
 
-<div id="dateNav" style="display:none;">
-  <button id="prevDayBtn">⬅️ Previous Day</button>
-  <span id="currentDateDisplay"></span>
-  <button id="nextDayBtn">➡️ Next Day</button>
-</div>
-
 <div id="credentials">
   <p>Enter your Google OAuth Client ID & Google Sheet ID:</p>
   <input type="text" id="clientIdInput" placeholder="Google OAuth Client ID">
@@ -99,8 +93,15 @@ button:hover {
 <div id="newTask" style="display:none;">
   <h3>Add New Task</h3>
   <input type="text" id="taskInput" placeholder="New task description">
-  <input type="datetime-local" id="startDateInput" placeholder="Start date (optional)">
+  <input type="datetime-local" id="startDateInput">
   <button id="addTaskBtn">➕ Add Task</button>
+</div>
+
+<!-- date navigation moved here -->
+<div id="dateNav" style="display:none;">
+  <button id="prevDayBtn">⬅️ Previous Day</button>
+  <span id="currentDateDisplay"></span>
+  <button id="nextDayBtn">➡️ Next Day</button>
 </div>
 
 <ul id="tasks"></ul>
@@ -109,10 +110,9 @@ button:hover {
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 const RANGE = 'Sheet1!A2:D';
 
-let clientId = '';
-let sheetId = '';
-let tokenClient;
-let accessToken = null;
+let clientId = '', sheetId = '', accessToken = null, tokenClient;
+let allRows = []; // store all rows
+let viewedDate = new Date();
 
 const startBtn = document.getElementById('startBtn');
 const authorizeBtn = document.getElementById('authorizeBtn');
@@ -130,11 +130,9 @@ const prevDayBtn = document.getElementById('prevDayBtn');
 const nextDayBtn = document.getElementById('nextDayBtn');
 const currentDateDisplay = document.getElementById('currentDateDisplay');
 
-let viewedDate = new Date();
-
-if (localStorage.getItem('clientId')) clientIdInput.value = localStorage.getItem('clientId');
-if (localStorage.getItem('sheetId')) sheetIdInput.value = localStorage.getItem('sheetId');
-if (localStorage.getItem('accessToken')) accessToken = localStorage.getItem('accessToken');
+if (localStorage.clientId) clientIdInput.value = localStorage.clientId;
+if (localStorage.sheetId) sheetIdInput.value = localStorage.sheetId;
+if (localStorage.accessToken) accessToken = localStorage.accessToken;
 
 startBtn.onclick = () => {
   clientId = clientIdInput.value.trim();
@@ -143,8 +141,8 @@ startBtn.onclick = () => {
     alert("Please enter both Client ID and Sheet ID.");
     return;
   }
-  localStorage.setItem('clientId', clientId);
-  localStorage.setItem('sheetId', sheetId);
+  localStorage.clientId = clientId;
+  localStorage.sheetId = sheetId;
   initClient();
   document.getElementById('credentials').style.display = 'none';
   if (!accessToken) authorizeBtn.style.display = 'inline-block';
@@ -154,7 +152,7 @@ startBtn.onclick = () => {
     newTaskDiv.style.display = 'block';
     dateNav.style.display = 'block';
     viewedDate = new Date();
-    loadTasks();
+    fetchTasks();
   }
 };
 
@@ -165,15 +163,15 @@ function initClient() {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
     scope: SCOPES,
-    callback: (tokenResponse) => {
-      accessToken = tokenResponse.access_token;
-      localStorage.setItem('accessToken', accessToken);
+    callback: (resp) => {
+      accessToken = resp.access_token;
+      localStorage.accessToken = accessToken;
       authorizeBtn.style.display = 'none';
       signoutBtn.style.display = 'inline-block';
       newTaskDiv.style.display = 'block';
       dateNav.style.display = 'block';
       viewedDate = new Date();
-      loadTasks();
+      fetchTasks();
     }
   });
 }
@@ -193,50 +191,15 @@ function revokeToken() {
   }
 }
 
-function loadTasks() {
-  const todayStr = viewedDate.toISOString().split('T')[0];
-  currentDateDisplay.textContent = viewedDate.toLocaleDateString();
-
+function fetchTasks() {
   statusDiv.textContent = 'Loading tasks...';
   fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${RANGE}`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   })
   .then(res => res.json())
   .then(data => {
-    tasksEl.innerHTML = '';
-    const rows = data.values || [];
-    const filteredRows = rows.filter(row => {
-      const createdAt = row[2];
-      if (!createdAt) return false;
-      const datePart = createdAt.trim().split(' ')[0];
-      return datePart === todayStr;
-    });
-
-    if (!filteredRows.length) {
-      statusDiv.textContent = 'No tasks for this date.';
-      return;
-    }
-
-    statusDiv.textContent = '';
-    filteredRows.forEach((row, idx) => {
-      const li = document.createElement('li');
-      li.className = 'task';
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.checked = row[1] === '✅';
-      checkbox.onchange = () => updateTask(idx + 2, checkbox.checked ? '✅' : '❌');
-      li.appendChild(checkbox);
-
-      const info = document.createElement('div');
-      info.className = 'info';
-      info.innerHTML = `
-        <strong>${row[0]}</strong><br>
-        <small>📅 Created: ${row[2] || '-'}</small><br>
-        <small>✅ Completed: ${row[3] || '-'}</small>
-      `;
-      li.appendChild(info);
-      tasksEl.appendChild(li);
-    });
+    allRows = data.values || [];
+    showTasksForDate(viewedDate);
   })
   .catch(err => {
     statusDiv.textContent = 'Error loading tasks.';
@@ -244,31 +207,70 @@ function loadTasks() {
   });
 }
 
+function showTasksForDate(date) {
+  tasksEl.innerHTML = '';
+  const todayStr = date.toISOString().split('T')[0];
+  currentDateDisplay.textContent = date.toLocaleDateString();
+
+  const rows = allRows
+    .map((row, idx) => ({ idx, row }))
+    .filter(({ row }) => {
+      const createdAt = row[2];
+      if (!createdAt) return false;
+      const datePart = createdAt.split(' ')[0];
+      return datePart === todayStr;
+    });
+
+  if (!rows.length) {
+    statusDiv.textContent = 'No tasks for this date.';
+    return;
+  }
+
+  statusDiv.textContent = '';
+
+  rows.forEach(({ idx, row }) => {
+    const li = document.createElement('li');
+    li.className = 'task';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = row[1] === '✅';
+    checkbox.onchange = () => updateTask(idx, checkbox.checked ? '✅' : '❌');
+    li.appendChild(checkbox);
+
+    const info = document.createElement('div');
+    info.className = 'info';
+    info.innerHTML = `
+      <strong>${row[0]}</strong><br>
+      <small>📅 Created: ${row[2] || '-'}</small><br>
+      <small>✅ Completed: ${row[3] || '-'}</small>
+    `;
+    li.appendChild(info);
+    tasksEl.appendChild(li);
+  });
+}
+
 function getTimestamp() {
   return new Date().toISOString().replace('T', ' ').substring(0, 19);
 }
 
-function updateTask(rowNumber, status) {
+function updateTask(idx, status) {
+  const rowNumber = idx + 2; // because Sheet1 starts at row 2
   const timestamp = status === '✅' ? getTimestamp() : '';
-  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!C${rowNumber}:C${rowNumber}`, {
-    headers: { Authorization: `Bearer ${accessToken}` }
-  })
-  .then(res => res.json())
-  .then(data => {
-    const createdAt = (data.values && data.values[0] && data.values[0][0]) || getTimestamp();
-    const body = { values: [[status, createdAt, timestamp]] };
-    return fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!B${rowNumber}:D${rowNumber}?valueInputOption=RAW`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
+  const createdAt = allRows[idx][2] || getTimestamp();
+
+  const body = { values: [[status, createdAt, timestamp]] };
+  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!B${rowNumber}:D${rowNumber}?valueInputOption=RAW`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
   })
   .then(() => {
-    statusDiv.textContent = 'Task updated.';
-    loadTasks();
+    allRows[idx][1] = status;
+    allRows[idx][3] = timestamp;
+    showTasksForDate(viewedDate);
   })
   .catch(err => {
     statusDiv.textContent = 'Error updating task.';
@@ -282,12 +284,12 @@ addTaskBtn.onclick = () => {
     alert("Please enter a task description.");
     return;
   }
-  let createdAt = startDateInput.value
+  const createdAt = startDateInput.value
     ? startDateInput.value.replace('T', ' ')
     : getTimestamp();
-  const body = {
-    values: [[taskDesc, '❌', createdAt, '']]
-  };
+
+  const body = { values: [[taskDesc, '❌', createdAt, '']] };
+
   fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A2:D2:append?valueInputOption=RAW`, {
     method: 'POST',
     headers: {
@@ -299,8 +301,7 @@ addTaskBtn.onclick = () => {
   .then(() => {
     taskInput.value = '';
     startDateInput.value = '';
-    statusDiv.textContent = 'Task added.';
-    loadTasks();
+    fetchTasks();
   })
   .catch(err => {
     statusDiv.textContent = 'Error adding task.';
@@ -310,12 +311,12 @@ addTaskBtn.onclick = () => {
 
 prevDayBtn.onclick = () => {
   viewedDate.setDate(viewedDate.getDate() - 1);
-  loadTasks();
+  showTasksForDate(viewedDate);
 };
 
 nextDayBtn.onclick = () => {
   viewedDate.setDate(viewedDate.getDate() + 1);
-  loadTasks();
+  showTasksForDate(viewedDate);
 };
 
 // Auto-start if saved
