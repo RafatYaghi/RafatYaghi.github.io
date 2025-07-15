@@ -168,6 +168,8 @@ body.dark #controls {
   <button id="fullscreenBtn">⛶ Fullscreen</button>
   <button id="darkModeBtn">🌙 Dark</button>
   <button id="notifyBtn">🔔 Notify: Off</button>
+  <button id="addTaskBtn">➕ Add Task</button>
+
 </div>
 
 <script>
@@ -381,7 +383,76 @@ function revealControls(e) {
     controls.classList.add('hidden');
   }
 }
+const addTaskBtnUI = document.getElementById('addTaskBtn');
+const addTaskModal = document.getElementById('addTaskModal');
+const saveTaskBtn = document.getElementById('saveTaskBtn');
+const cancelTaskBtn = document.getElementById('cancelTaskBtn');
+const taskInput = document.getElementById('taskInput');
+const startDateInput = document.getElementById('startDateInput');
+
+addTaskBtnUI.onclick = () => {
+  addTaskModal.style.display = 'block';
+};
+
+cancelTaskBtn.onclick = () => {
+  addTaskModal.style.display = 'none';
+  taskInput.value = '';
+  startDateInput.value = '';
+};
+
+saveTaskBtn.onclick = () => {
+  const taskDesc = taskInput.value.trim();
+  if (!taskDesc) {
+    alert("Please enter a task description.");
+    return;
+  }
+  const createdAt = startDateInput.value
+    ? startDateInput.value.replace('T',' ')
+    : new Date().toISOString().replace('T',' ').substring(0,19);
+  const body = {
+    values: [[taskDesc, '❌', createdAt, '']]
+  };
+  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A2:D2:append?valueInputOption=RAW`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  })
+  .then(res => res.json())
+  .then(() => {
+    taskInput.value = '';
+    startDateInput.value = '';
+    addTaskModal.style.display = 'none';
+    loadTasks();
+  })
+  .catch(err => {
+    console.error(err);
+    alert("Failed to add task.");
+  });
+};
+
 </script>
+<div id="addTaskModal" style="
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  background:white;
+  padding:20px;
+  box-shadow:0 0 10px rgba(0,0,0,0.3);
+  z-index:10;
+  display:none;
+  border-radius:6px;
+">
+  <h3>Add New Task</h3>
+  <input type="text" id="taskInput" placeholder="Task description" style="width:100%;margin:5px 0;padding:5px;">
+  <input type="datetime-local" id="startDateInput" style="width:100%;margin:5px 0;padding:5px;">
+  <button id="saveTaskBtn">✅ Save</button>
+  <button id="cancelTaskBtn">❌ Cancel</button>
+</div>
+
 
 </body>
 </html>
