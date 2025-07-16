@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dodge the Stars 🌟</title>
+<style>
+body {
+  margin: 0;
+  background: linear-gradient(to bottom, #001f3f, #0074D9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-family: sans-serif;
+  color: white;
+  flex-direction: column;
+}
+canvas {
+  background: rgba(0,0,0,0.2);
+  box-shadow: 0 0 20px #fff;
+}
+#info {
+  margin: 10px;
+}
+button {
+  padding: 10px 20px;
+  background: #FF4136;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 10px;
+}
+</style>
+</head>
+<body>
+<div id="info">Score: <span id="score">0</span> | High Score: <span id="highscore">0</span></div>
+<canvas id="game" width="400" height="600"></canvas>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const scoreEl = document.getElementById("score");
+const highscoreEl = document.getElementById("highscore");
+
+let player = { x: 180, y: 550, w: 40, h: 20, color: "lime" };
+let stars = [];
+let coins = [];
+let score = 0;
+let highscore = 0;
+let speed = 2;
+let playing = true;
+
+function reset() {
+  player.x = 180;
+  stars = [];
+  coins = [];
+  score = 0;
+  speed = 2;
+  playing = true;
+  spawnStars();
+  spawnCoins();
+}
+
+function spawnStars() {
+  stars.push({ x: Math.random()*360, y: -20, w: 20, h: 20, color: "yellow" });
+  setTimeout(spawnStars, Math.max(500, 2000 - score*10));
+}
+
+function spawnCoins() {
+  coins.push({ x: Math.random()*360, y: -20, w: 15, h: 15, color: "gold" });
+  setTimeout(spawnCoins, Math.random()*5000 + 3000);
+}
+
+function drawPlayer() {
+  ctx.fillStyle = player.color;
+  ctx.fillRect(player.x, player.y, player.w, player.h);
+}
+
+function drawStars() {
+  stars.forEach(s => {
+    ctx.fillStyle = s.color;
+    ctx.fillRect(s.x, s.y, s.w, s.h);
+  });
+}
+
+function drawCoins() {
+  coins.forEach(c => {
+    ctx.fillStyle = c.color;
+    ctx.beginPath();
+    ctx.arc(c.x+c.w/2, c.y+c.h/2, c.w/2, 0, Math.PI*2);
+    ctx.fill();
+  });
+}
+
+function moveStars() {
+  stars.forEach(s => s.y += speed);
+  stars = stars.filter(s => s.y < 600);
+}
+
+function moveCoins() {
+  coins.forEach(c => c.y += speed);
+  coins = coins.filter(c => c.y < 600);
+}
+
+function checkCollisions() {
+  stars.forEach(s => {
+    if (s.x < player.x+player.w && s.x+s.w > player.x &&
+        s.y < player.y+player.h && s.y+s.h > player.y) {
+      playing = false;
+    }
+  });
+  coins.forEach((c,i) => {
+    if (c.x < player.x+player.w && c.x+c.w > player.x &&
+        c.y < player.y+player.h && c.y+c.h > player.y) {
+      score += 5;
+      coins.splice(i,1);
+    }
+  });
+}
+
+function update() {
+  if (!playing) {
+    if (score > highscore) highscore = score;
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(0,0,400,600);
+    ctx.fillStyle = "white";
+    ctx.font = "30px Arial";
+    ctx.fillText("Game Over", 120, 250);
+    ctx.font = "20px Arial";
+    ctx.fillText("Press Space to Restart", 100, 300);
+    highscoreEl.textContent = highscore;
+    return;
+  }
+
+  ctx.clearRect(0,0,400,600);
+
+  // background stars
+  ctx.fillStyle = "rgba(255,255,255,0.1)";
+  for (let i=0; i<50; i++) {
+    ctx.fillRect(Math.random()*400, Math.random()*600, 1,1);
+  }
+
+  drawPlayer();
+  drawStars();
+  drawCoins();
+
+  moveStars();
+  moveCoins();
+
+  checkCollisions();
+
+  score++;
+  if (score % 100 === 0) speed += 0.2;
+
+  scoreEl.textContent = score;
+}
+
+function loop() {
+  update();
+  if (playing || true) requestAnimationFrame(loop);
+}
+
+document.addEventListener("keydown", e => {
+  if (!playing && e.code==="Space") {
+    reset();
+  }
+  if (e.key === "ArrowLeft") player.x -= 20;
+  if (e.key === "ArrowRight") player.x += 20;
+
+  if (player.x < 0) player.x = 0;
+  if (player.x+player.w > 400) player.x = 400-player.w;
+});
+
+reset();
+loop();
+</script>
+</body>
+</html>
