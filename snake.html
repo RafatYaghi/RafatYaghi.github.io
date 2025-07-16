@@ -12,6 +12,7 @@
     background: #111;
     color: white;
     font-family: sans-serif;
+    height: 100vh;
   }
   canvas {
     background: #222;
@@ -30,17 +31,15 @@ const columns = canvas.width / scale;
 
 let snake;
 let cat;
+let direction;
+let nextDirection;
 
-(function setup() {
-  snake = [];
-  snake.push({x: 10, y: 10});
-  direction = {x: 0, y: 0};
+function initGame() {
+  snake = [{x: Math.floor(columns/2), y: Math.floor(rows/2)}];
+  direction = null;   // 🐢 snake waits for you
+  nextDirection = null;
   placeCat();
-  window.setInterval(() => {
-    update();
-    draw();
-  }, 100);
-})();
+}
 
 function placeCat() {
   cat = {
@@ -50,15 +49,19 @@ function placeCat() {
 }
 
 function update() {
+  if (!direction) return; // don’t move until user presses key
+
   const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
-  if (head.x < 0 || head.x >= columns || head.y < 0 || head.y >= rows || snake.some(s => s.x === head.x && s.y === head.y)) {
+
+  if (head.x < 0 || head.x >= columns || head.y < 0 || head.y >= rows ||
+      snake.some(s => s.x === head.x && s.y === head.y)) {
     alert("Game Over!");
-    snake = [{x: 10, y: 10}];
-    direction = {x: 0, y: 0};
-    placeCat();
+    initGame();
     return;
   }
+
   snake.unshift(head);
+
   if (head.x === cat.x && head.y === cat.y) {
     placeCat();
   } else {
@@ -68,35 +71,46 @@ function update() {
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  // Draw snake
+
+  // draw snake
   ctx.fillStyle = "lime";
   snake.forEach(part => {
-    ctx.fillRect(part.x * scale, part.y * scale, scale, scale);
+    ctx.fillRect(part.x * scale, part.y * scale, scale-1, scale-1);
   });
-  // Draw cat
+
+  // draw cat
   ctx.font = `${scale}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("🐱", cat.x * scale + scale/2, cat.y * scale + scale/2);
 }
 
+function gameLoop() {
+  if (nextDirection) direction = nextDirection;
+  update();
+  draw();
+}
+
+initGame();
+setInterval(gameLoop, 100);
+
 window.addEventListener("keydown", e => {
   switch(e.key) {
     case "ArrowUp":
-      if (direction.y === 1) break;
-      direction = {x: 0, y: -1};
+      if (direction?.y === 1) break;
+      nextDirection = {x:0, y:-1};
       break;
     case "ArrowDown":
-      if (direction.y === -1) break;
-      direction = {x: 0, y: 1};
+      if (direction?.y === -1) break;
+      nextDirection = {x:0, y:1};
       break;
     case "ArrowLeft":
-      if (direction.x === 1) break;
-      direction = {x: -1, y: 0};
+      if (direction?.x === 1) break;
+      nextDirection = {x:-1, y:0};
       break;
     case "ArrowRight":
-      if (direction.x === -1) break;
-      direction = {x: 1, y: 0};
+      if (direction?.x === -1) break;
+      nextDirection = {x:1, y:0};
       break;
   }
 });
