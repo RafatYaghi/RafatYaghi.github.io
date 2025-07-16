@@ -2,115 +2,202 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Snake Eats Cats 🐍🐱</title>
+<title>Snake Eats Cats with Monster 🐍🐱👹</title>
 <style>
-  body {
-    margin: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #111;
-    color: white;
-    font-family: sans-serif;
-    height: 100vh;
-  }
-  canvas {
-    background: #222;
-  }
+body {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #111;
+  color: white;
+  font-family: sans-serif;
+  height: 100vh;
+  flex-direction: column;
+}
+canvas {
+  background: #222;
+  margin-top: 10px;
+}
 </style>
 </head>
 <body>
+<div>
+  Score: <span id="score">0</span> | High Score: <span id="highscore">0</span>
+</div>
 <canvas id="game" width="400" height="400"></canvas>
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const scoreEl = document.getElementById("score");
+const highscoreEl = document.getElementById("highscore");
 
 const scale = 20;
 const rows = canvas.height / scale;
-const columns = canvas.width / scale;
+const cols = canvas.width / scale;
 
-let snake;
-let cat;
-let direction;
-let nextDirection;
+let snake = [];
+let cat = {};
+let monster = {};
+let dir = { x: 0, y: 0 };
+let nextDir = { x: 0, y: 0 };
+let alive = true;
+let score = 0;
+let highscore = 0;
 
-function initGame() {
-  snake = [{x: Math.floor(columns/2), y: Math.floor(rows/2)}];
-  direction = null;   // 🐢 snake waits for you
-  nextDirection = null;
+function resetGame() {
+  snake = [
+    { x: Math.floor(cols / 2), y: Math.floor(rows / 2) }
+  ];
+  dir = { x: 0, y: 0 };
+  nextDir = { x: 0, y: 0 };
+  score = 0;
+  updateScore();
   placeCat();
+  placeMonster();
+  alive = true;
 }
 
 function placeCat() {
-  cat = {
-    x: Math.floor(Math.random() * columns),
-    y: Math.floor(Math.random() * rows)
-  };
+  let newCat;
+  do {
+    newCat = {
+      x: Math.floor(Math.random() * cols),
+      y: Math.floor(Math.random() * rows)
+    };
+  } while (snake.some(s => s.x === newCat.x && s.y === newCat.y));
+  cat = newCat;
+}
+
+function placeMonster() {
+  let newMonster;
+  do {
+    newMonster = {
+      x: Math.floor(Math.random() * cols),
+      y: Math.floor(Math.random() * rows)
+    };
+  } while (snake.some(s => s.x === newMonster.x && s.y === newMonster.y) || (newMonster.x === cat.x && newMonster.y === cat.y));
+  monster = newMonster;
+}
+
+function updateScore() {
+  scoreEl.textContent = score;
+  highscoreEl.textContent = highscore;
+}
+
+function moveMonster() {
+  const dx = snake[0].x - monster.x;
+  const dy = snake[0].y - monster.y;
+
+  if (Math.abs(dx) > Math.abs(dy)) {
+    monster.x += Math.sign(dx);
+  } else if (dy !== 0) {
+    monster.y += Math.sign(dy);
+  }
 }
 
 function update() {
-  if (!direction) return; // don’t move until user presses key
+  if (!alive) return;
 
-  const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
+  if (nextDir.x !== 0 || nextDir.y !== 0) dir = { ...nextDir };
+  if (dir.x === 0 && dir.y === 0) return;
 
-  if (head.x < 0 || head.x >= columns || head.y < 0 || head.y >= rows ||
-      snake.some(s => s.x === head.x && s.y === head.y)) {
-    alert("Game Over!");
-    initGame();
+  const head = {
+    x: snake[0].x + dir.x,
+    y: snake[0].y + dir.y
+  };
+
+  // Check walls, self, monster
+  if (
+    head.x < 0 || head.x >= cols ||
+    head.y < 0 || head.y >= rows ||
+    snake.some(s => s.x === head.x && s.y === head.y) ||
+    (head.x === monster.x && head.y === monster.y)
+  ) {
+    alive = false;
+    if (score > highscore) highscore = score;
+    setTimeout(() => {
+      alert("Game Over!");
+      resetGame();
+    }, 10);
     return;
   }
 
   snake.unshift(head);
 
   if (head.x === cat.x && head.y === cat.y) {
+    score++;
+    updateScore();
     placeCat();
   } else {
     snake.pop();
+  }
+
+  moveMonster();
+
+  if (monster.x === head.x && monster.y === head.y) {
+    alive = false;
+    if (score > highscore) highscore = score;
+    setTimeout(() => {
+      alert("Game Over!");
+      resetGame();
+    }, 10);
   }
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // draw snake
-  ctx.fillStyle = "lime";
-  snake.forEach(part => {
-    ctx.fillRect(part.x * scale, part.y * scale, scale-1, scale-1);
-  });
-
   // draw cat
   ctx.font = `${scale}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("🐱", cat.x * scale + scale/2, cat.y * scale + scale/2);
+
+  // draw monster
+  ctx.fillText("👹", monster.x * scale + scale/2, monster.y * scale + scale/2);
+
+  // draw snake
+  snake.forEach((part, idx) => {
+    if (idx === 0) {
+      // head with face
+      const face = dir.x === 1 ? "😃" :
+                   dir.x === -1 ? "😄" :
+                   dir.y === 1 ? "🙂" :
+                   dir.y === -1 ? "🙃" : "🟩";
+      ctx.fillText(face, part.x * scale + scale/2, part.y * scale + scale/2);
+    } else {
+      ctx.fillStyle = "lime";
+      ctx.fillRect(part.x * scale, part.y * scale, scale-1, scale-1);
+    }
+  });
 }
 
 function gameLoop() {
-  if (nextDirection) direction = nextDirection;
   update();
   draw();
 }
 
-initGame();
-setInterval(gameLoop, 100);
+resetGame();
+setInterval(gameLoop, 150);
 
 window.addEventListener("keydown", e => {
   switch(e.key) {
     case "ArrowUp":
-      if (direction?.y === 1) break;
-      nextDirection = {x:0, y:-1};
+      if (dir.y === 1) break;
+      nextDir = { x: 0, y: -1 };
       break;
     case "ArrowDown":
-      if (direction?.y === -1) break;
-      nextDirection = {x:0, y:1};
+      if (dir.y === -1) break;
+      nextDir = { x: 0, y: 1 };
       break;
     case "ArrowLeft":
-      if (direction?.x === 1) break;
-      nextDirection = {x:-1, y:0};
+      if (dir.x === 1) break;
+      nextDir = { x: -1, y: 0 };
       break;
     case "ArrowRight":
-      if (direction?.x === -1) break;
-      nextDirection = {x:1, y:0};
+      if (dir.x === -1) break;
+      nextDir = { x: 1, y: 0 };
       break;
   }
 });
