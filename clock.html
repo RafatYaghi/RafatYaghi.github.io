@@ -6,6 +6,41 @@
 <title>📋 Tasks Grid + Clock + Dark Mode + Notifications</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
+#stopwatch {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #222;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 1rem;
+  box-shadow: 0 0 4px rgba(0,0,0,0.2);
+  z-index: 2;
+}
+body.dark #stopwatch {
+  background: rgba(0, 0, 0, 0.8);
+  color: #ddd;
+}
+
+#stopwatch-buttons {
+  margin-top: 4px;
+  display: flex;
+  gap: 4px;
+}
+#stopwatch-buttons button {
+  background: #007ACC;
+  color: white;
+  border: none;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#stopwatch-buttons button:hover {
+  background: #005f99;
+}
+
 body {
   margin: 0;
   height: 100vh;
@@ -150,6 +185,13 @@ body.dark #controls {
 </style>
 </head>
 <body>
+<div id="stopwatch">
+  ⏱ 00:00:00
+  <div id="stopwatch-buttons">
+    <button id="startStopBtn">▶️ Start</button>
+    <button id="resetBtn">🔄 Reset</button>
+  </div>
+</div>
 
 <div id="credentials">
   <input type="text" id="clientIdInput" placeholder="Google OAuth Client ID">
@@ -454,6 +496,47 @@ saveTaskBtn.onclick = () => {
     alert("Failed to add task.");
   });
 };
+
+const stopwatchEl = document.getElementById('stopwatch');
+const startStopBtn = document.getElementById('startStopBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+let stopwatchInterval = null;
+let elapsedTime = 0;
+let running = false;
+
+function updateStopwatch() {
+  const hours = String(Math.floor(elapsedTime / 3600)).padStart(2, '0');
+  const minutes = String(Math.floor((elapsedTime % 3600) / 60)).padStart(2, '0');
+  const seconds = String(elapsedTime % 60).padStart(2, '0');
+  stopwatchEl.firstChild.textContent = `⏱ ${hours}:${minutes}:${seconds}`;
+}
+
+startStopBtn.onclick = () => {
+  if (!running) {
+    running = true;
+    startStopBtn.textContent = '⏸️ Pause';
+    stopwatchInterval = setInterval(() => {
+      elapsedTime++;
+      updateStopwatch();
+    }, 1000);
+  } else {
+    running = false;
+    startStopBtn.textContent = '▶️ Start';
+    clearInterval(stopwatchInterval);
+  }
+};
+
+resetBtn.onclick = () => {
+  running = false;
+  clearInterval(stopwatchInterval);
+  elapsedTime = 0;
+  updateStopwatch();
+  startStopBtn.textContent = '▶️ Start';
+};
+
+updateStopwatch();
+
 
 </script>
 
