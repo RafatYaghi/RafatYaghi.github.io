@@ -2,177 +2,243 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Dodge the Stars 🌟</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✨ Task Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
+* { box-sizing: border-box; }
 body {
   margin: 0;
-  background: linear-gradient(to bottom, #001f3f, #0074D9);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  font-family: sans-serif;
-  color: white;
-  flex-direction: column;
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #e9f1f7, #f4f7fa);
+  color: #333;
+  overflow: hidden;
 }
-canvas {
-  background: rgba(0,0,0,0.2);
-  box-shadow: 0 0 20px #fff;
+body.dark {
+  background: linear-gradient(135deg, #181818, #202020);
+  color: #ddd;
 }
-#info {
-  margin: 10px;
+
+#clock-container {
+  position: absolute;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  text-align: center;
 }
-button {
-  padding: 10px 20px;
-  background: #FF4136;
-  color: white;
+#clock {
+  font-size: 12vw;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #222;
+}
+body.dark #clock { color: #eee; }
+
+#date {
+  font-size: 1.2rem;
+  margin-top: 6px;
+  color: #555;
+}
+body.dark #date { color: #aaa; }
+
+#controls {
+  position: absolute; top: 0; right: 0;
+  display: flex; gap: 8px; padding: 10px;
+  backdrop-filter: blur(6px);
+  background: rgba(255,255,255,0.2);
+  border-bottom-left-radius: 10px;
+}
+body.dark #controls { background: rgba(0,0,0,0.3); }
+
+#controls button {
   border: none;
+  background: rgba(255,255,255,0.8);
+  padding: 5px 12px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 16px;
-  margin-top: 10px;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+#controls button:hover {
+  background: rgba(255,255,255,1);
+  transform: translateY(-1px);
+}
+body.dark #controls button {
+  background: rgba(30,30,30,0.7);
+  color: #eee;
+}
+
+#progress {
+  position: absolute; top: 10px; left: 10px;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 2px;
+  width: calc(100% - 20px);
+  height: calc(100% - 20px);
+}
+.segment {
+  background: rgba(255,255,255,0.3);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px;
+  transition: all 0.2s;
+}
+body.dark .segment { background: rgba(0,0,0,0.3); }
+
+.task-card {
+  background: rgba(255,255,255,0.9);
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.task-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+body.dark .task-card {
+  background: rgba(30,30,30,0.9);
+  color: #eee;
+}
+
+#next-tasks {
+  position: absolute;
+  bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: rgba(255,255,255,0.85);
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  min-width: 250px;
+  text-align: center;
+}
+body.dark #next-tasks { background: rgba(20,20,20,0.85); }
+
+#next-tasks h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.9rem;
+  color: #007ACC;
+}
+body.dark #next-tasks h4 { color: #66B2FF; }
+
+.next-task-item {
+  background: rgba(255,255,255,0.95);
+  margin: 4px 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  text-align: left;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  animation: fadeIn 0.3s ease;
+}
+body.dark .next-task-item {
+  background: rgba(40,40,40,0.95);
+  color: #eee;
+}
+
+@keyframes fadeIn {
+  from { opacity:0; transform: translateY(5px); }
+  to { opacity:1; transform: translateY(0); }
+}
+
+.modal {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  background: #fff; padding: 20px; border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  display: none;
+  z-index: 10;
+}
+.modal input {
+  width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;
+}
+.modal button {
+  padding: 6px 12px; margin-top: 6px;
 }
 </style>
 </head>
 <body>
-<div id="info">Score: <span id="score">0</span> | High Score: <span id="highscore">0</span></div>
-<canvas id="game" width="400" height="600"></canvas>
+
+<div id="clock-container">
+  <div id="clock">12:00</div>
+  <div id="date">Monday, July 1</div>
+</div>
+
+<div id="progress"></div>
+
+<div id="controls">
+  <button id="fullscreenBtn">⛶</button>
+  <button id="darkModeBtn">🌙</button>
+  <button id="addTaskBtn">➕</button>
+</div>
+
+<div id="next-tasks">
+  <h4>Next Tasks</h4>
+  <div id="next-tasks-list"></div>
+</div>
+
+<div class="modal" id="addTaskModal">
+  <h3>Add Task</h3>
+  <input type="text" id="taskInput" placeholder="Task description">
+  <input type="datetime-local" id="startDateInput">
+  <button id="saveTaskBtn">Save</button>
+  <button id="cancelTaskBtn">Cancel</button>
+</div>
+
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-const scoreEl = document.getElementById("score");
-const highscoreEl = document.getElementById("highscore");
+const progress = document.getElementById('progress');
+const clock = document.getElementById('clock');
+const dateDiv = document.getElementById('date');
+const darkBtn = document.getElementById('darkModeBtn');
+const addTaskBtn = document.getElementById('addTaskBtn');
+const addTaskModal = document.getElementById('addTaskModal');
+const saveTaskBtn = document.getElementById('saveTaskBtn');
+const cancelTaskBtn = document.getElementById('cancelTaskBtn');
+const nextTasksList = document.getElementById('next-tasks-list');
 
-let player = { x: 180, y: 550, w: 40, h: 20, color: "lime" };
-let stars = [];
-let coins = [];
-let score = 0;
-let highscore = 0;
-let speed = 2;
-let playing = true;
-
-function reset() {
-  player.x = 180;
-  stars = [];
-  coins = [];
-  score = 0;
-  speed = 2;
-  playing = true;
-  spawnStars();
-  spawnCoins();
+for (let i = 0; i < 48; i++) {
+  const seg = document.createElement('div');
+  seg.className = 'segment';
+  progress.appendChild(seg);
 }
 
-function spawnStars() {
-  stars.push({ x: Math.random()*360, y: -20, w: 20, h: 20, color: "yellow" });
-  setTimeout(spawnStars, Math.max(500, 2000 - score*10));
+function updateClock() {
+  const now = new Date();
+  clock.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  dateDiv.textContent = now.toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+function showModal(show) {
+  addTaskModal.style.display = show ? 'block' : 'none';
 }
 
-function spawnCoins() {
-  coins.push({ x: Math.random()*360, y: -20, w: 15, h: 15, color: "gold" });
-  setTimeout(spawnCoins, Math.random()*5000 + 3000);
+addTaskBtn.onclick = () => showModal(true);
+cancelTaskBtn.onclick = () => showModal(false);
+saveTaskBtn.onclick = () => {
+  const desc = document.getElementById('taskInput').value.trim();
+  const time = document.getElementById('startDateInput').value;
+  if (!desc || !time) return alert('Fill all fields');
+  const div = document.createElement('div');
+  div.className = 'next-task-item';
+  div.textContent = `${new Date(time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} - ${desc}`;
+  nextTasksList.appendChild(div);
+  showModal(false);
+  document.getElementById('taskInput').value = '';
+  document.getElementById('startDateInput').value = '';
 }
 
-function drawPlayer() {
-  ctx.fillStyle = player.color;
-  ctx.fillRect(player.x, player.y, player.w, player.h);
+darkBtn.onclick = () => document.body.classList.toggle('dark');
+
+fullscreenBtn.onclick = () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
 }
-
-function drawStars() {
-  stars.forEach(s => {
-    ctx.fillStyle = s.color;
-    ctx.fillRect(s.x, s.y, s.w, s.h);
-  });
-}
-
-function drawCoins() {
-  coins.forEach(c => {
-    ctx.fillStyle = c.color;
-    ctx.beginPath();
-    ctx.arc(c.x+c.w/2, c.y+c.h/2, c.w/2, 0, Math.PI*2);
-    ctx.fill();
-  });
-}
-
-function moveStars() {
-  stars.forEach(s => s.y += speed);
-  stars = stars.filter(s => s.y < 600);
-}
-
-function moveCoins() {
-  coins.forEach(c => c.y += speed);
-  coins = coins.filter(c => c.y < 600);
-}
-
-function checkCollisions() {
-  stars.forEach(s => {
-    if (s.x < player.x+player.w && s.x+s.w > player.x &&
-        s.y < player.y+player.h && s.y+s.h > player.y) {
-      playing = false;
-    }
-  });
-  coins.forEach((c,i) => {
-    if (c.x < player.x+player.w && c.x+c.w > player.x &&
-        c.y < player.y+player.h && c.y+c.h > player.y) {
-      score += 5;
-      coins.splice(i,1);
-    }
-  });
-}
-
-function update() {
-  if (!playing) {
-    if (score > highscore) highscore = score;
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-    ctx.fillRect(0,0,400,600);
-    ctx.fillStyle = "white";
-    ctx.font = "30px Arial";
-    ctx.fillText("Game Over", 120, 250);
-    ctx.font = "20px Arial";
-    ctx.fillText("Press Space to Restart", 100, 300);
-    highscoreEl.textContent = highscore;
-    return;
-  }
-
-  ctx.clearRect(0,0,400,600);
-
-  // background stars
-  ctx.fillStyle = "rgba(255,255,255,0.1)";
-  for (let i=0; i<50; i++) {
-    ctx.fillRect(Math.random()*400, Math.random()*600, 1,1);
-  }
-
-  drawPlayer();
-  drawStars();
-  drawCoins();
-
-  moveStars();
-  moveCoins();
-
-  checkCollisions();
-
-  score++;
-  if (score % 100 === 0) speed += 0.2;
-
-  scoreEl.textContent = score;
-}
-
-function loop() {
-  update();
-  if (playing || true) requestAnimationFrame(loop);
-}
-
-document.addEventListener("keydown", e => {
-  if (!playing && e.code==="Space") {
-    reset();
-  }
-  if (e.key === "ArrowLeft") player.x -= 20;
-  if (e.key === "ArrowRight") player.x += 20;
-
-  if (player.x < 0) player.x = 0;
-  if (player.x+player.w > 400) player.x = 400-player.w;
-});
-
-reset();
-loop();
 </script>
 </body>
 </html>
