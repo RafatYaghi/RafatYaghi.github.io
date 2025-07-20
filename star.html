@@ -162,17 +162,44 @@ body.dark #next-tasks { background: rgba(20,20,20,0.85); }
   color: #007ACC;
 }
 body.dark #next-tasks h4 { color: #66B2FF; }
-
 .next-task-item {
-  background: rgba(255,255,255,0.95);
-  margin: 4px 0;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  text-align: left;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  animation: fadeIn 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(145deg, #fff, #f0f0f0);
+  margin: 6px 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: slideFadeIn 0.3s ease;
 }
+
+.next-task-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.task-time {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #007aff;
+}
+
+.task-desc {
+  flex: 1;
+  margin-left: 10px;
+  font-size: 0.85rem;
+  color: #333;
+}
+
+.task-dot {
+  width: 10px; height: 10px;
+  background: #34c759; /* green by default */
+  border-radius: 50%;
+}
+
 body.dark .next-task-item {
   background: rgba(40,40,40,0.95);
   color: #eee;
@@ -219,6 +246,8 @@ body.dark .next-task-item {
 <div id="next-tasks">
   <h4>Next Tasks</h4>
   <div id="next-tasks-list"></div>
+  <div id="countdown" style="margin-top: 10px; font-size: 0.8rem; color: #555;"></div>
+
 </div>
 
 <div class="modal" id="addTaskModal">
@@ -352,15 +381,38 @@ function loadTasks(sheetId) {
   .catch(err => console.error(err));
 }
 
+function updateCountdown(nextTime) {
+  const countdownEl = document.getElementById('countdown');
+  const interval = setInterval(() => {
+    const now = new Date();
+    const diff = new Date(nextTime) - now;
+    if (diff <= 0) {
+      countdownEl.textContent = `⏳ Task starting now`;
+      clearInterval(interval);
+    } else {
+      const mins = Math.floor(diff / 60000);
+      const secs = Math.floor((diff % 60000) / 1000);
+      countdownEl.textContent = `Starts in ${mins}m ${secs}s`;
+    }
+  }, 1000);
+}
+
+
 function renderTasks(rows) {
   nextTasksList.innerHTML = '';
   rows.slice(0,3).forEach(row => {
     const [name,,createdAt] = row;
     const div = document.createElement('div');
     div.className = 'next-task-item';
-    div.textContent = `${createdAt || ''} - ${name}`;
+    div.innerHTML = `
+      <div class="task-time">${createdAt || ''}</div>
+      <div class="task-desc">${name}</div>
+      <div class="task-dot"></div>
+    `;
     nextTasksList.appendChild(div);
   });
+  updateCountdown(time);
+
 }
 
 
