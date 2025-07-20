@@ -412,30 +412,37 @@ body.dark #controls button {
 body.dark #controls button:hover {
   background: rgba(0, 0, 0, 0.5);
 }
+
+
 #next-tasks {
   position: absolute;
   bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  padding: 10px 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  padding: 12px 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   font-size: 0.85rem;
-  text-align: center;
-  z-index: 2;
-  min-width: 200px;
+  text-align: left;
+  z-index: 3;
+  min-width: 220px;
+  max-width: 300px;
+  transition: all 0.3s ease;
 }
 
 body.dark #next-tasks {
-  background: rgba(34, 34, 34, 0.95);
-  color: #ddd;
+  background: rgba(30, 30, 30, 0.8);
+  color: #eee;
 }
 
 #next-tasks h4 {
-  margin: 0 0 6px 0;
+  margin: 0 0 8px 0;
   font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.5px;
   color: #007ACC;
 }
 
@@ -446,21 +453,60 @@ body.dark #next-tasks h4 {
 #next-tasks-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .next-task-item {
-  background: rgba(255, 255, 255, 0.9);
-  padding: 4px 6px;
-  border-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 6px 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  font-size: 0.8rem;
+  position: relative;
+  overflow: hidden;
+  animation: slideIn 0.3s ease forwards;
 }
 
 body.dark .next-task-item {
-  background: rgba(50,50,50,0.9);
+  background: rgba(50,50,50,0.85);
   color: #ddd;
+  box-shadow: 0 2px 4px rgba(255,255,255,0.05);
 }
+
+.next-task-item::before {
+  content: '';
+  width: 6px;
+  height: 100%;
+  background: linear-gradient(180deg, #0094ff, #007ACC);
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 8px 0 0 8px;
+}
+
+.next-task-time {
+  font-weight: 600;
+  color: #007ACC;
+  min-width: 50px;
+  text-align: right;
+}
+
+body.dark .next-task-time {
+  color: #66B2FF;
+}
+
+.next-task-name {
+  flex: 1;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 
 </style>
 </head>
@@ -729,10 +775,22 @@ function loadTasks() {
       upcoming.slice(0, 3).forEach(task => {
         const div = document.createElement('div');
         div.className = 'next-task-item';
-        div.textContent = `${task.time} — ${task.name}`;
+
+        const timeSpan = document.createElement('div');
+        timeSpan.className = 'next-task-time';
+        timeSpan.textContent = task.time;
+
+        const nameSpan = document.createElement('div');
+        nameSpan.className = 'next-task-name';
+        nameSpan.textContent = task.name;
+
+        div.appendChild(timeSpan);
+        div.appendChild(nameSpan);
+
         nextTasksList.appendChild(div);
       });
     }
+
 
   })
   .catch(err => console.error(err));
