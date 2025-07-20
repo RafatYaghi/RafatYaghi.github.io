@@ -294,7 +294,7 @@ const saveTaskBtn = document.getElementById('saveTaskBtn');
 const cancelTaskBtn = document.getElementById('cancelTaskBtn');
 const nextTasksList = document.getElementById('next-tasks-list');
 const credentialsConnectBtn = document.getElementById('credentialsConnectBtn');
-
+const RANGE = 'Sheet1!A2:D';
 
 for (let i = 0; i < 48; i++) {
   const seg = document.createElement('div');
@@ -386,7 +386,7 @@ function initOAuth() {
   tokenClient.requestAccessToken();
 }
 
-function loadTasks() {
+function loadTasks(sheetId) {
   const now = new Date();
   const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
