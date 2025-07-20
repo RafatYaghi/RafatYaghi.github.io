@@ -3,24 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📋 Tasks Grid + Clock + Dark Mode + Next Tasks</title>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<title>✨ Task Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  height: 100vh;
-  overflow: hidden;
-  background: #f7f7f7;
-  color: #222;
-  transition: background 0.3s, color 0.3s;
-}
-body.dark {
-  background: #222;
-  color: #ddd;
-}
 
-/* Modal */
+
+
+
 .modal {
   position: fixed;
   top: 50%;
@@ -37,12 +26,14 @@ body.dark {
 }
 body.dark .modal {
   background: rgba(34,34,34,0.95);
+  color: #ddd;
 }
 .modal.show {
   display: block;
 }
 .modal input {
-  margin: 10px 0;
+  display: block;
+  margin: 10px auto;
   padding: 8px;
   width: 80%;
   border-radius: 6px;
@@ -50,168 +41,177 @@ body.dark .modal {
 }
 .modal button {
   margin-top: 10px;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  background: #007ACC;
-  color: white;
-  cursor: pointer;
-}
-.modal button:hover {
-  background: #005f99;
 }
 
-/* Clock */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #e9f1f7, #f4f7fa);
+  color: #333;
+  overflow: hidden;
+}
+body.dark {
+  background: linear-gradient(135deg, #181818, #202020);
+  color: #ddd;
+}
+
 #clock-container {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
   text-align: center;
 }
 #clock {
-  font-size: 8vw;
-  font-weight: bold;
+  font-size: 12vw;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #222;
 }
+body.dark #clock { color: #eee; }
+
 #date {
-  margin-top: 10px;
+  font-size: 1.2rem;
+  margin-top: 6px;
+  color: #555;
+}
+body.dark #date { color: #aaa; }
+
+#controls {
+  position: absolute; top: 0; right: 0;
+  display: flex; gap: 8px; padding: 10px;
+  backdrop-filter: blur(6px);
+  background: rgba(255,255,255,0.2);
+  border-bottom-left-radius: 10px;
+}
+body.dark #controls { background: rgba(0,0,0,0.3); }
+
+#controls button {
+  border: none;
+  background: rgba(255,255,255,0.8);
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+#controls button:hover {
+  background: rgba(255,255,255,1);
+  transform: translateY(-1px);
+}
+body.dark #controls button {
+  background: rgba(30,30,30,0.7);
+  color: #eee;
 }
 
-/* Segments */
 #progress {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  position: absolute; top: 10px; left: 10px;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(6, 1fr);
   gap: 2px;
-  z-index: -1;
-  padding: 5px;
+  width: calc(100% - 20px);
+  height: calc(100% - 20px);
 }
 .segment {
-  background: transparent;
-  font-size: 0.7rem;
+  background: rgba(255,255,255,0.3);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   padding: 2px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  transition: all 0.2s;
 }
-.task {
-  background: rgba(255,255,255,0.8);
-  margin: 2px 0;
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-size: 0.65rem;
-  display: flex;
-  gap: 4px;
-}
-body.dark .task {
-  background: rgba(50,50,50,0.8);
-}
+body.dark .segment { background: rgba(0,0,0,0.3); }
 
-/* Next tasks */
-#next-tasks {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
+.task-card {
   background: rgba(255,255,255,0.9);
-  backdrop-filter: blur(10px);
-  border-radius: 8px;
-  padding: 10px;
-  min-width: 220px;
-  max-width: 300px;
-  z-index: 3;
-  text-align: left;
-}
-body.dark #next-tasks {
-  background: rgba(34,34,34,0.9);
-}
-#next-tasks h4 {
-  margin: 0 0 5px;
-  text-align: center;
-  font-size: 0.9rem;
-}
-#next-tasks-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.next-task-item {
-  background: rgba(255,255,255,0.8);
-  border-radius: 4px;
-  padding: 2px 4px;
+  padding: 6px 8px;
+  border-radius: 6px;
   font-size: 0.75rem;
-}
-body.dark .next-task-item {
-  background: rgba(50,50,50,0.8);
-}
-
-/* Controls */
-#controls {
-  position: absolute;
-  top: 0;
-  right: 0;
   display: flex;
   gap: 6px;
-  background: rgba(255,255,255,0.7);
-  backdrop-filter: blur(6px);
-  padding: 6px;
-  border-bottom-left-radius: 8px;
-  z-index: 3;
-}
-body.dark #controls {
-  background: rgba(0,0,0,0.7);
-}
-#controls button {
-  border: none;
-  background: rgba(0,0,0,0.1);
-  color: #333;
-  padding: 4px 6px;
-  border-radius: 4px;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   cursor: pointer;
+  transition: transform 0.2s;
 }
-body.dark #controls button {
-  color: #ddd;
+.task-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
-#stopwatch {
+body.dark .task-card {
+  background: rgba(30,30,30,0.9);
+  color: #eee;
+}
+
+#next-tasks {
   position: absolute;
-  bottom: 10px;
-  left: 10px;
-  background: rgba(255,255,255,0.9);
-  border-radius: 6px;
-  padding: 6px;
+  bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: rgba(255,255,255,0.85);
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  min-width: 250px;
+  text-align: center;
 }
-body.dark #stopwatch {
-  background: rgba(34,34,34,0.9);
+body.dark #next-tasks { background: rgba(20,20,20,0.85); }
+
+#next-tasks h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.9rem;
+  color: #007ACC;
+}
+body.dark #next-tasks h4 { color: #66B2FF; }
+
+.next-task-item {
+  background: rgba(255,255,255,0.95);
+  margin: 4px 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  text-align: left;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  animation: fadeIn 0.3s ease;
+}
+body.dark .next-task-item {
+  background: rgba(40,40,40,0.95);
+  color: #eee;
+}
+
+@keyframes fadeIn {
+  from { opacity:0; transform: translateY(5px); }
+  to { opacity:1; transform: translateY(0); }
+}
+
+.modal {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  background: #fff; padding: 20px; border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  display: none;
+  z-index: 10;
+}
+.modal input {
+  width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;
+}
+.modal button {
+  padding: 6px 12px; margin-top: 6px;
 }
 </style>
 </head>
 <body>
 
-<div id="credentials-modal" class="modal show">
-  <h3>🔗 Connect to Google Sheets</h3>
-  <input type="text" id="clientIdInput" placeholder="Google OAuth Client ID">
-  <input type="text" id="sheetIdInput" placeholder="Google Sheet ID">
-  <button id="connectBtn">✅ Connect</button>
+<div id="clock-container">
+  <div id="clock">12:00</div>
+  <div id="date">Monday, July 1</div>
 </div>
 
 <div id="progress"></div>
 
-<div id="clock-container">
-  <div id="clock"></div>
-  <div id="date"></div>
-</div>
-
 <div id="controls">
-  <button id="darkModeBtn">🌙 Dark</button>
-</div>
-
-<div id="stopwatch">
-  ⏱ 00:00:00
-  <button id="startStopBtn">▶️ Start</button>
-  <button id="resetBtn">🔄 Reset</button>
+  <button id="fullscreenBtn">⛶</button>
+  <button id="darkModeBtn">🌙</button>
+  <button id="addTaskBtn">➕</button>
+    <button id="connectBtn">Connect</button>
 </div>
 
 <div id="next-tasks">
@@ -219,29 +219,68 @@ body.dark #stopwatch {
   <div id="next-tasks-list"></div>
 </div>
 
-<script>
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
-const RANGE = 'Sheet1!A2:D';
-let accessToken = null, clientId = '', sheetId = '', tokenClient;
+<div class="modal" id="addTaskModal">
+  <h3>Add Task</h3>
+  <input type="text" id="taskInput" placeholder="Task description">
+  <input type="datetime-local" id="startDateInput">
+  <button id="saveTaskBtn">Save</button>
+  <button id="cancelTaskBtn">Cancel</button>
+</div>
 
+<script>
+const progress = document.getElementById('progress');
 const clock = document.getElementById('clock');
 const dateDiv = document.getElementById('date');
-const segments = [];
-const progress = document.getElementById('progress');
-
-const credentialsModal = document.getElementById('credentials-modal');
-const connectBtn = document.getElementById('connectBtn');
-const clientIdInput = document.getElementById('clientIdInput');
-const sheetIdInput = document.getElementById('sheetIdInput');
+const darkBtn = document.getElementById('darkModeBtn');
+const addTaskBtn = document.getElementById('addTaskBtn');
+const addTaskModal = document.getElementById('addTaskModal');
+const saveTaskBtn = document.getElementById('saveTaskBtn');
+const cancelTaskBtn = document.getElementById('cancelTaskBtn');
 const nextTasksList = document.getElementById('next-tasks-list');
 
-// init segments
 for (let i = 0; i < 48; i++) {
   const seg = document.createElement('div');
   seg.className = 'segment';
   progress.appendChild(seg);
-  segments.push(seg);
 }
+
+function updateClock() {
+  const now = new Date();
+  clock.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  dateDiv.textContent = now.toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+function showModal(show) {
+  addTaskModal.style.display = show ? 'block' : 'none';
+}
+
+addTaskBtn.onclick = () => showModal(true);
+cancelTaskBtn.onclick = () => showModal(false);
+saveTaskBtn.onclick = () => {
+  const desc = document.getElementById('taskInput').value.trim();
+  const time = document.getElementById('startDateInput').value;
+  if (!desc || !time) return alert('Fill all fields');
+  const div = document.createElement('div');
+  div.className = 'next-task-item';
+  div.textContent = `${new Date(time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} - ${desc}`;
+  nextTasksList.appendChild(div);
+  showModal(false);
+  document.getElementById('taskInput').value = '';
+  document.getElementById('startDateInput').value = '';
+}
+
+darkBtn.onclick = () => document.body.classList.toggle('dark');
+
+fullscreenBtn.onclick = () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+}
+const credentialsModal = document.getElementById('credentials-modal');
+const connectBtn = document.getElementById('connectBtn');
+const clientIdInput = document.getElementById('clientIdInput');
+const sheetIdInput = document.getElementById('sheetIdInput');
 
 if (localStorage.clientId && localStorage.sheetId) {
   clientIdInput.value = localStorage.clientId;
@@ -252,162 +291,18 @@ if (localStorage.clientId && localStorage.sheetId) {
 }
 
 connectBtn.onclick = () => {
-  clientId = clientIdInput.value.trim();
-  sheetId = sheetIdInput.value.trim();
-  if (!clientId || !sheetId) return alert("Please enter both IDs");
+  const clientId = clientIdInput.value.trim();
+  const sheetId = sheetIdInput.value.trim();
+  if (!clientId || !sheetId) {
+    alert("Please fill both Client ID and Sheet ID");
+    return;
+  }
   localStorage.clientId = clientId;
   localStorage.sheetId = sheetId;
   credentialsModal.classList.remove('show');
   initOAuth();
 };
 
-function initOAuth() {
-  clientId = localStorage.clientId;
-  sheetId = localStorage.sheetId;
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: clientId,
-    scope: SCOPES,
-    callback: (resp) => {
-      accessToken = resp.access_token;
-      loadTasks();
-      setInterval(loadTasks, 60 * 1000);
-    }
-  });
-  tokenClient.requestAccessToken();
-}
-
-// Clock & segments
-function updateClock() {
-  const now = new Date();
-  clock.textContent = now.toLocaleTimeString();
-  dateDiv.textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-
-  const totalMinutes = now.getHours() * 60 + now.getMinutes();
-  const passedSegments = Math.floor(totalMinutes / 30);
-  const progressPercent = (totalMinutes % 30) / 30 * 100;
-
-  segments.forEach((seg, idx) => {
-    if (idx < passedSegments) seg.style.background = 'rgba(0,255,0,0.2)';
-    else if (idx === passedSegments) seg.style.background = `linear-gradient(to right, rgba(0,255,0,0.3) ${progressPercent}%, transparent 0%)`;
-    else seg.style.background = 'transparent';
-  });
-}
-setInterval(updateClock, 1000);
-updateClock();
-
-function clearSegments() {
-  segments.forEach(seg => seg.innerHTML = '');
-}
-
-// Load tasks
-function loadTasks() {
-  const now = new Date();
-  const today = now.toISOString().split('T')[0];
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  clearSegments();
-  nextTasksList.innerHTML = '';
-
-  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${RANGE}`, {
-    headers: { Authorization: `Bearer ${accessToken}` }
-  })
-  .then(res => res.json())
-  .then(data => {
-    const rows = data.values || [];
-    const upcoming = [];
-
-    rows.forEach((row, idx) => {
-      const [name, status, createdAt] = row;
-      if (!name || !createdAt) return;
-      const [datePart, timePart] = createdAt.split(' ');
-      if (datePart !== today) return;
-
-      const [hour, minute] = timePart.split(':').map(Number);
-      const minutes = hour * 60 + minute;
-      const segIdx = Math.floor(minutes / 30);
-
-      const div = document.createElement('div');
-      div.className = 'task';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = status === '✅';
-      cb.onchange = () => updateTask(idx + 2, cb.checked ? '✅' : '❌');
-      div.appendChild(cb);
-      div.append(name);
-
-      segments[segIdx]?.appendChild(div);
-
-      if (minutes > nowMinutes) {
-        upcoming.push({name, time: `${String(hour).padStart(2,0)}:${String(minute).padStart(2,0)}`, minutes});
-      }
-    });
-
-    upcoming.sort((a,b) => a.minutes-b.minutes);
-    if (upcoming.length === 0) {
-      nextTasksList.innerHTML = `<div class="next-task-item">🎉 No upcoming tasks</div>`;
-    } else {
-      upcoming.slice(0,3).forEach(task => {
-        const div = document.createElement('div');
-        div.className = 'next-task-item';
-        div.textContent = `${task.time} — ${task.name}`;
-        nextTasksList.appendChild(div);
-      });
-    }
-  });
-}
-
-function updateTask(rowNumber, status) {
-  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!C${rowNumber}:C${rowNumber}`, {
-    headers: { Authorization: `Bearer ${accessToken}` }
-  })
-  .then(res => res.json())
-  .then(data => {
-    const createdAt = data.values?.[0]?.[0] || '';
-    const body = { values: [[status, createdAt, new Date().toISOString()]] };
-    return fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!B${rowNumber}:D${rowNumber}?valueInputOption=RAW`, {
-      method: 'PUT',
-      headers: {'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json'},
-      body: JSON.stringify(body)
-    });
-  })
-  .then(() => loadTasks());
-}
-
-// Dark Mode
-document.getElementById('darkModeBtn').onclick = () => document.body.classList.toggle('dark');
-
-// Stopwatch
-const stopwatchEl = document.getElementById('stopwatch');
-const startStopBtn = document.getElementById('startStopBtn');
-const resetBtn = document.getElementById('resetBtn');
-let stopwatchInterval = null, elapsed = 0, running = false;
-startStopBtn.onclick = () => {
-  if (!running) {
-    running = true;
-    startStopBtn.textContent = '⏸️ Pause';
-    stopwatchInterval = setInterval(() => {
-      elapsed++;
-      updateStopwatch();
-    },1000);
-  } else {
-    running = false;
-    clearInterval(stopwatchInterval);
-    startStopBtn.textContent = '▶️ Start';
-  }
-};
-resetBtn.onclick = () => {
-  elapsed = 0;
-  running = false;
-  clearInterval(stopwatchInterval);
-  updateStopwatch();
-  startStopBtn.textContent = '▶️ Start';
-};
-function updateStopwatch() {
-  const h = String(Math.floor(elapsed/3600)).padStart(2,0);
-  const m = String(Math.floor(elapsed/60)%60).padStart(2,0);
-  const s = String(elapsed%60).padStart(2,0);
-  stopwatchEl.childNodes[0].textContent = `⏱ ${h}:${m}:${s}`;
-}
-updateStopwatch();
 </script>
 </body>
 </html>
