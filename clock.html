@@ -6,6 +6,201 @@
 <title>📋 Tasks Grid + Clock + Dark Mode + Notifications</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
+
+#addTaskModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  display: none;
+  border-radius: 12px;
+  width: 300px;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  color: #222;
+}
+body.dark #addTaskModal {
+  background: rgba(34, 34, 34, 0.95);
+  color: #ddd;
+}
+
+#addTaskModal h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+#addTaskModal input {
+  width: 100%;
+  margin: 6px 0;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+body.dark #addTaskModal input {
+  background: #444;
+  border: 1px solid #666;
+  color: #ddd;
+}
+
+#addTaskModal button {
+  background: #007ACC;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.2s;
+}
+#addTaskModal button:hover {
+  background: #005f99;
+}
+
+#addTaskModal .modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+
+
+
+button {
+  background: linear-gradient(145deg, #0094ff, #007ACC);
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  background: linear-gradient(145deg, #007ACC, #005f99);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+button:active {
+  transform: scale(0.98);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+}
+
+body.dark button {
+  background: linear-gradient(145deg, #333, #222);
+  color: #ddd;
+  box-shadow: 0 2px 4px rgba(255,255,255,0.05);
+}
+
+body.dark button:hover {
+  background: linear-gradient(145deg, #444, #333);
+  box-shadow: 0 4px 8px rgba(255,255,255,0.1);
+}
+#saveTaskBtn {
+  background: linear-gradient(145deg, #4CAF50, #43A047);
+  color: #fff;
+  font-weight: 500;
+  border: none;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
+}
+
+#saveTaskBtn:hover {
+  background: linear-gradient(145deg, #43A047, #388E3C);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+#saveTaskBtn:active {
+  transform: scale(0.97);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+}
+
+#cancelTaskBtn {
+  background: linear-gradient(145deg, #F44336, #E53935);
+  color: #fff;
+  font-weight: 500;
+  border: none;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
+}
+
+#cancelTaskBtn:hover {
+  background: linear-gradient(145deg, #E53935, #D32F2F);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+#cancelTaskBtn:active {
+  transform: scale(0.97);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+}
+.segment .task {
+  background: rgba(255, 255, 255, 0.9);
+  color: #222;
+  margin: 4px 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  width: calc(100% - 4px);
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+body.dark .segment .task {
+  background: rgba(50, 50, 50, 0.8);
+  color: #ddd;
+  box-shadow: 0 1px 3px rgba(255,255,255,0.05);
+}
+
+.segment .task:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  background: rgba(255, 255, 255, 1);
+}
+
+body.dark .segment .task:hover {
+  background: rgba(70, 70, 70, 0.9);
+  box-shadow: 0 2px 6px rgba(255,255,255,0.1);
+}
+
+.segment .task input[type="checkbox"] {
+  accent-color: #007ACC;
+  transform: scale(1.2);
+  cursor: pointer;
+}
+
+body.dark .segment .task input[type="checkbox"] {
+  accent-color: #66B2FF;
+}
+
+
+
 #stopwatch {
   position: absolute;
   bottom: 10px;
@@ -40,6 +235,15 @@ body.dark #stopwatch {
 #stopwatch-buttons button:hover {
   background: #005f99;
 }
+
+#stopwatch {
+  transition: opacity 0.3s ease;
+}
+#stopwatch.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 
 body {
   margin: 0;
@@ -155,33 +359,54 @@ body.dark #date {
   position: absolute;
   top: 0;
   right: 0;
-  background: rgba(255,255,255,0.9);
-  padding: 4px;
-  border-bottom-left-radius: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(8px);
+  padding: 8px 10px;
+  border-bottom-left-radius: 12px;
   display: flex;
-  gap: 4px;
-  transition: opacity 0.3s;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: opacity 0.3s, transform 0.3s;
   z-index: 3;
 }
+
 body.dark #controls {
-  background: rgba(0,0,0,0.8);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
 }
+
 #controls.hidden {
   opacity: 0;
   pointer-events: none;
+  transform: translateY(-20px);
 }
+
 #controls button {
-  background: #007ACC;
-  color: white;
+  background: rgba(255, 255, 255, 0.2);
+  color: #333;
   border: none;
-  padding: 4px 6px;
-  font-size: 0.8rem;
-  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  border-radius: 8px;
   cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
+
 #controls button:hover {
-  background: #005f99;
+  background: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
 }
+
+body.dark #controls button {
+  color: #ddd;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+body.dark #controls button:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
 </style>
 </head>
 <body>
@@ -211,20 +436,11 @@ body.dark #controls {
   <button id="darkModeBtn">🌙 Dark</button>
   <button id="notifyBtn">🔔 Notify: Off</button>
   <button id="addTaskBtn">➕ Add Task</button>
+  <button id="toggleStopwatchBtn">⏱ Hide Stopwatch</button>
+
 
 </div>
-<div id="addTaskModal" style="
-  position:fixed;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  background:white;
-  padding:20px;
-  box-shadow:0 0 10px rgba(0,0,0,0.3);
-  z-index:10;
-  display:none;
-  border-radius:6px;
-">
+<div id="addTaskModal" >
   <h3>Add New Task</h3>
   <input type="text" id="taskInput" placeholder="Task description" style="width:100%;margin:5px 0;padding:5px;">
   <input type="datetime-local" id="startDateInput" style="width:100%;margin:5px 0;padding:5px;">
@@ -234,6 +450,26 @@ body.dark #controls {
 
 
 <script>
+
+const toggleStopwatchBtn = document.getElementById('toggleStopwatchBtn');
+const stopwatch = document.getElementById('stopwatch');
+
+let stopwatchVisible = true;
+
+toggleStopwatchBtn.onclick = () => {
+  stopwatchVisible = !stopwatchVisible;
+  if (stopwatchVisible) {
+    stopwatch.classList.remove('hidden');
+    toggleStopwatchBtn.textContent = '⏱ Hide Stopwatch';
+  } else {
+    stopwatch.classList.add('hidden');
+    toggleStopwatchBtn.textContent = '⏱ Show Stopwatch';
+  }
+
+};
+
+
+
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 const RANGE = 'Sheet1!A2:D';
 let accessToken = null, clientId = '', sheetId = '';
@@ -440,13 +676,32 @@ document.addEventListener('fullscreenchange', () => {
   }
 });
 
+let hoveringControls = false;
+
+controls.addEventListener('mouseenter', () => {
+  hoveringControls = true;
+  controls.classList.remove('hidden');
+});
+
+controls.addEventListener('mouseleave', () => {
+  hoveringControls = false;
+  // Only hide if the mouse is no longer at the corner either
+  if (!isAtCorner) {
+    controls.classList.add('hidden');
+  }
+});
+
+let isAtCorner = false;
+
 function revealControls(e) {
-  if (e.clientY < 50 && e.clientX > window.innerWidth - 150) {
+  isAtCorner = (e.clientY < 50 && e.clientX > window.innerWidth - 150);
+  if (isAtCorner || hoveringControls) {
     controls.classList.remove('hidden');
   } else {
     controls.classList.add('hidden');
   }
 }
+
 const addTaskBtnUI = document.getElementById('addTaskBtn');
 const addTaskModal = document.getElementById('addTaskModal');
 const saveTaskBtn = document.getElementById('saveTaskBtn');
