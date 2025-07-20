@@ -672,9 +672,12 @@ document.addEventListener('fullscreenchange', () => {
   } else {
     credentialsDiv.style.display = '';
     controls.classList.remove('hidden');
+    // 🔷 stop hiding controls in normal mode
+    controls.classList.remove('hidden');
     document.body.removeEventListener('mousemove', revealControls);
   }
 });
+
 
 let hoveringControls = false;
 
@@ -692,8 +695,8 @@ controls.addEventListener('mouseleave', () => {
 });
 
 let isAtCorner = false;
-
 function revealControls(e) {
+  if (!document.fullscreenElement) return; // 🔷 Only in fullscreen
   isAtCorner = (e.clientY < 50 && e.clientX > window.innerWidth - 150);
   if (isAtCorner || hoveringControls) {
     controls.classList.remove('hidden');
@@ -701,6 +704,7 @@ function revealControls(e) {
     controls.classList.add('hidden');
   }
 }
+
 
 const addTaskBtnUI = document.getElementById('addTaskBtn');
 const addTaskModal = document.getElementById('addTaskModal');
