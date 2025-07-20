@@ -294,12 +294,20 @@ const saveTaskBtn = document.getElementById('saveTaskBtn');
 const cancelTaskBtn = document.getElementById('cancelTaskBtn');
 const nextTasksList = document.getElementById('next-tasks-list');
 const credentialsConnectBtn = document.getElementById('credentialsConnectBtn');
-const RANGE = 'Sheet1!A2:D';
 
+let sheetId = null;
+const RANGE = 'Sheet1!A2:D';
+let accessToken = null;
+let tokenClient;
+const segments = [];
 for (let i = 0; i < 48; i++) {
   const seg = document.createElement('div');
   seg.className = 'segment';
   progress.appendChild(seg);
+  segments.push(seg);
+}
+function clearSegments() {
+  segments.forEach(seg => seg.innerHTML = '');
 }
 
 function updateClock() {
@@ -366,8 +374,6 @@ credentialsConnectBtn.onclick = () => {
   initOAuth();
 };
 
-let accessToken = null;
-let tokenClient;
 
 function initOAuth() {
   const clientId = localStorage.clientId;
