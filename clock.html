@@ -352,8 +352,8 @@ body.dark #clock {
 }
 
 #date {
-  position: absolute;
-  bottom: 40px;
+  position: relative;
+  margin-top: 10px;
   font-size: 1.2rem;
   color: #555;
 }
@@ -412,6 +412,55 @@ body.dark #controls button {
 body.dark #controls button:hover {
   background: rgba(0, 0, 0, 0.5);
 }
+#next-tasks {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  padding: 10px 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  font-size: 0.85rem;
+  text-align: center;
+  z-index: 2;
+  min-width: 200px;
+}
+
+body.dark #next-tasks {
+  background: rgba(34, 34, 34, 0.95);
+  color: #ddd;
+}
+
+#next-tasks h4 {
+  margin: 0 0 6px 0;
+  font-size: 0.9rem;
+  color: #007ACC;
+}
+
+body.dark #next-tasks h4 {
+  color: #66B2FF;
+}
+
+#next-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.next-task-item {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 6px;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  font-size: 0.75rem;
+}
+
+body.dark .next-task-item {
+  background: rgba(50,50,50,0.9);
+  color: #ddd;
+}
 
 </style>
 </head>
@@ -435,6 +484,10 @@ body.dark #controls button:hover {
 <div id="clock-container">
   <div id="clock"></div>
   <div id="date"></div>
+</div>
+<div id="next-tasks">
+  <h4>Next Tasks</h4>
+  <div id="next-tasks-list"></div>
 </div>
 
 <div id="controls">
@@ -623,8 +676,54 @@ const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());  
 
       segments[segmentIndex].appendChild(taskDiv);
     });
-  })
-  .catch(err => console.error(err));
+})
+.then(() => {
+  // Populate next-tasks panel
+  const nextTasksList = document.getElementById('next-tasks-list');
+  nextTasksList.innerHTML = '';
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const upcoming = [];
+
+  rows.forEach((row) => {
+    const [name,, createdAt] = row;
+    if (!createdAt || !name) return;
+
+    const parts = createdAt.trim().split(' ');
+    if (parts.length < 2) return;
+
+    const [datePart, timePart] = parts;
+    const [y, m, d] = datePart.split('-').map(Number);
+    const taskDate = new Date(y, m - 1, d);
+
+    if (taskDate.getTime() !== todayLocal.getTime()) return;
+
+    const [hourStr, minuteStr] = timePart.split(':');
+    const taskMinutes = parseInt(hourStr) * 60 + parseInt(minuteStr);
+
+    if (taskMinutes > nowMinutes) {
+      upcoming.push({ name, time: `${hourStr}:${minuteStr}` });
+    }
+  });
+
+  upcoming.sort((a, b) => a.time.localeCompare(b.time));
+
+  if (upcoming.length === 0) {
+    const div = document.createElement('div');
+    div.className = 'next-task-item';
+    div.textContent = '🎉 No upcoming tasks';
+    nextTasksList.appendChild(div);
+  } else {
+    upcoming.slice(0, 3).forEach(task => {
+      const div = document.createElement('div');
+      div.className = 'next-task-item';
+      div.textContent = `${task.time} — ${task.name}`;
+      nextTasksList.appendChild(div);
+    });
+  }
+})
+.catch(err => console.error(err));
+
 }
 
 function updateTask(rowNumber, status) {
