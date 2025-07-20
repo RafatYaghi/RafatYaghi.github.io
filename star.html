@@ -227,6 +227,14 @@ body.dark .next-task-item {
   <button id="cancelTaskBtn">Cancel</button>
 </div>
 
+<div class="modal" id="credentials-modal">
+  <h3>Enter Google Credentials</h3>
+  <input type="text" id="clientIdInput" placeholder="Google OAuth Client ID">
+  <input type="text" id="sheetIdInput" placeholder="Google Sheet ID">
+  <button id="credentialsConnectBtn">Connect</button>
+</div>
+
+
 <script>
 const progress = document.getElementById('progress');
 const clock = document.getElementById('clock');
@@ -237,6 +245,8 @@ const addTaskModal = document.getElementById('addTaskModal');
 const saveTaskBtn = document.getElementById('saveTaskBtn');
 const cancelTaskBtn = document.getElementById('cancelTaskBtn');
 const nextTasksList = document.getElementById('next-tasks-list');
+const credentialsConnectBtn = document.getElementById('credentialsConnectBtn');
+
 
 for (let i = 0; i < 48; i++) {
   const seg = document.createElement('div');
@@ -285,12 +295,17 @@ const sheetIdInput = document.getElementById('sheetIdInput');
 if (localStorage.clientId && localStorage.sheetId) {
   clientIdInput.value = localStorage.clientId;
   sheetIdInput.value = localStorage.sheetId;
-  initOAuth();
-} else {
-  credentialsModal.classList.add('show');
 }
 
+
 connectBtn.onclick = () => {
+  credentialsModal.classList.toggle('show');
+};
+
+
+
+
+credentialsConnectBtn.onclick = () => {
   const clientId = clientIdInput.value.trim();
   const sheetId = sheetIdInput.value.trim();
   if (!clientId || !sheetId) {
@@ -302,6 +317,50 @@ connectBtn.onclick = () => {
   credentialsModal.classList.remove('show');
   initOAuth();
 };
+
+let accessToken = null;
+let tokenClient;
+
+function initOAuth() {
+  const clientId = localStorage.clientId;
+  const sheetId = localStorage.sheetId;
+
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: 'https://www.googleapis.com/auth/spreadsheets',
+    callback: (resp) => {
+      accessToken = resp.access_token;
+      console.log("✅ Connected, got access token");
+      loadTasks(sheetId);
+    }
+  });
+
+  tokenClient.requestAccessToken();
+}
+
+function loadTasks(sheetId) {
+  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A2:D`, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  })
+  .then(res => res.json())
+  .then(data => {
+    console.log("📋 Tasks loaded:", data);
+    renderTasks(data.values || []);
+  })
+  .catch(err => console.error(err));
+}
+
+function renderTasks(rows) {
+  nextTasksList.innerHTML = '';
+  rows.slice(0,3).forEach(row => {
+    const [name,,createdAt] = row;
+    const div = document.createElement('div');
+    div.className = 'next-task-item';
+    div.textContent = `${createdAt || ''} - ${name}`;
+    nextTasksList.appendChild(div);
+  });
+}
+
 
 </script>
 </body>
