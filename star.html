@@ -56,6 +56,18 @@ body.dark {
   color: #ddd;
 }
 
+#mini-calendar {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(255,255,255,0.95);
+  padding: 10px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  z-index: 5;
+}
+
+
 #clock-container {
   position: absolute;
   top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -434,12 +446,14 @@ div.onclick = () => {
   div.style.opacity = 0.4;
   div.style.textDecoration = 'line-through';
 }
-flatpickr("#mini-calendar", {
-  inline: true,
-  defaultDate: new Date(),
-  locale: {
-    firstDayOfWeek: 1
-  }
+document.addEventListener("DOMContentLoaded", () => {
+  flatpickr("#mini-calendar", {
+    inline: true,
+    defaultDate: new Date(),
+    locale: {
+      firstDayOfWeek: 1
+    }
+  });
 });
 
 
