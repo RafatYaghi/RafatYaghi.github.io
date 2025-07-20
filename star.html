@@ -244,8 +244,6 @@ body.dark .next-task-item {
 }
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 </head>
 <body>
@@ -267,10 +265,7 @@ body.dark .next-task-item {
 <div id="next-tasks">
   <h4>Next Tasks</h4>
   <div id="next-tasks-list"></div>
-  <div id="countdown" style="margin-top: 10px; font-size: 0.8rem; color: #555;"></div>
-
 </div>
-<div id="mini-calendar"></div>
 
 <div class="modal" id="addTaskModal">
   <h3>Add Task</h3>
@@ -391,33 +386,120 @@ function initOAuth() {
   tokenClient.requestAccessToken();
 }
 
-function loadTasks(sheetId) {
-  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A2:D`, {
+function loadTasks() {
+  const now = new Date();
+  const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${RANGE}`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   })
   .then(res => res.json())
   .then(data => {
-    console.log("📋 Tasks loaded:", data);
-    renderTasks(data.values || []);
+    clearSegments();
+    const rows = data.values || [];
+
+    rows.forEach((row, idx) => {
+      const [name, status, createdAt] = row;
+      if (!createdAt || !name) return;
+
+      const parts = createdAt.trim().split(' ');
+      if (parts.length < 2) return;
+
+      const [datePart, timePart] = parts;
+      const [y, m, d] = datePart.split('-').map(Number);
+      const taskDate = new Date(y, m - 1, d);
+
+      if (taskDate.getTime() !== todayLocal.getTime()) return;
+
+      const [hourStr, minuteStr] = timePart.split(':');
+      const hour = parseInt(hourStr);
+      const minute = parseInt(minuteStr);
+      if (isNaN(hour) || isNaN(minute)) return;
+
+      const segmentIndex = Math.floor((hour * 60 + minute) / 30);
+      if (!segments[segmentIndex]) return;
+
+      const taskDiv = document.createElement('div');
+      taskDiv.className = 'task';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = status === '✅';
+      checkbox.onchange = () => updateTask(idx + 2, checkbox.checked ? '✅' : '❌');
+      taskDiv.appendChild(checkbox);
+      taskDiv.append(name);
+
+      segments[segmentIndex].appendChild(taskDiv);
+    });
+
+    // 🔷 Now populate Next Tasks
+    const nextTasksList = document.getElementById('next-tasks-list');
+    nextTasksList.innerHTML = '';
+
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const upcoming = [];
+
+    rows.forEach((row) => {
+      const [name,, createdAt] = row;
+      if (!createdAt || !name) return;
+
+      const parts = createdAt.trim().split(' ');
+      if (parts.length < 2) return;
+
+      const [datePart, timePart] = parts;
+      const [y, m, d] = datePart.split('-').map(Number);
+      const taskDate = new Date(y, m - 1, d);
+
+      const todayY = now.getFullYear(), todayM = now.getMonth(), todayD = now.getDate();
+      if (taskDate.getFullYear() !== todayY || taskDate.getMonth() !== todayM || taskDate.getDate() !== todayD) {
+        return;
+      }
+
+      if (!timePart.includes(':')) return;
+
+      const [hourStr, minuteStr] = timePart.split(':').map(s => s.padStart(2, '0'));
+      const taskMinutes = parseInt(hourStr) * 60 + parseInt(minuteStr);
+
+      if (taskMinutes > nowMinutes) {
+        upcoming.push({
+          name,
+          time: `${hourStr}:${minuteStr}`,
+          minutes: taskMinutes
+        });
+      }
+    });
+
+    upcoming.sort((a, b) => a.minutes - b.minutes);
+
+    if (upcoming.length === 0) {
+      const div = document.createElement('div');
+      div.className = 'next-task-item';
+      div.textContent = '🎉 No upcoming tasks';
+      nextTasksList.appendChild(div);
+    } else {
+      upcoming.slice(0, 3).forEach(task => {
+        const div = document.createElement('div');
+        div.className = 'next-task-item';
+
+        const timeSpan = document.createElement('div');
+        timeSpan.className = 'next-task-time';
+        timeSpan.textContent = task.time;
+
+        const nameSpan = document.createElement('div');
+        nameSpan.className = 'next-task-name';
+        nameSpan.textContent = task.name;
+
+        div.appendChild(timeSpan);
+        div.appendChild(nameSpan);
+
+        nextTasksList.appendChild(div);
+      });
+    }
+
+
   })
   .catch(err => console.error(err));
 }
 
-function updateCountdown(nextTime) {
-  const countdownEl = document.getElementById('countdown');
-  const interval = setInterval(() => {
-    const now = new Date();
-    const diff = new Date(nextTime) - now;
-    if (diff <= 0) {
-      countdownEl.textContent = `⏳ Task starting now`;
-      clearInterval(interval);
-    } else {
-      const mins = Math.floor(diff / 60000);
-      const secs = Math.floor((diff % 60000) / 1000);
-      countdownEl.textContent = `Starts in ${mins}m ${secs}s`;
-    }
-  }, 1000);
-}
 
 
 function renderTasks(rows) {
