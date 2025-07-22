@@ -6,10 +6,6 @@
 <title>✨ Task Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-
-
-
-
 .modal {
   position: fixed;
   top: 50%;
@@ -56,46 +52,166 @@ body.dark {
   color: #ddd;
 }
 
-#mini-calendar {
+#clock-container {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  background: rgba(255,255,255,0.95);
-  padding: 10px;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  top: 50%; 
+  left: 50%; 
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 10;
+}
+
+/* Beautiful circular progress ring */
+#progress-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 280px;
+  height: 280px;
   z-index: 5;
 }
 
-
-#clock-container {
-  position: absolute;
-  top: 50%; left: 50%; transform: translate(-50%, -50%);
-  text-align: center;
+#progress-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
 }
+
+#progress-ring .ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 3;
+}
+
+body.dark #progress-ring .ring-bg {
+  stroke: rgba(255, 255, 255, 0.05);
+}
+
+#progress-ring .ring-progress {
+  fill: none;
+  stroke: #007AFF;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 854.513; /* 2 * π * 136 */
+  stroke-dashoffset: 854.513;
+  transition: stroke-dashoffset 0.5s ease-out;
+  filter: drop-shadow(0 0 8px rgba(0, 122, 255, 0.3));
+}
+
+body.dark #progress-ring .ring-progress {
+  stroke: #66B2FF;
+  filter: drop-shadow(0 0 8px rgba(102, 178, 255, 0.2));
+}
+
+/* Subtle pulsing animation for the ring */
+@keyframes ringPulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+#progress-ring .ring-progress {
+  animation: ringPulse 2s ease-in-out infinite;
+}
+
+/* Progress indicator dots */
+.progress-dots {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  height: 300px;
+  pointer-events: none;
+}
+
+.progress-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: rgba(0, 122, 255, 0.4);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+body.dark .progress-dot {
+  background: rgba(102, 178, 255, 0.4);
+}
+
+.progress-dot.active {
+  opacity: 1;
+  background: #007AFF;
+  box-shadow: 0 0 8px rgba(0, 122, 255, 0.6);
+}
+
+body.dark .progress-dot.active {
+  background: #66B2FF;
+  box-shadow: 0 0 8px rgba(102, 178, 255, 0.4);
+}
+
 #clock {
-  font-size: 12vw;
+  font-size: 11vw;
   font-weight: 700;
   letter-spacing: 0.05em;
   color: #222;
+  margin: 0;
+  line-height: 1;
 }
-body.dark #clock { color: #eee; }
+body.dark #clock { 
+  color: #eee; 
+}
 
 #date {
-  font-size: 1.2rem;
-  margin-top: 6px;
+  font-size: 1.1rem;
+  margin-top: 8px;
   color: #555;
+  font-weight: 500;
 }
-body.dark #date { color: #aaa; }
+body.dark #date { 
+  color: #aaa; 
+}
+
+/* Time remaining indicator */
+#time-remaining {
+  position: absolute;
+  top: -45px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  color: #007AFF;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 12px;
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+
+body.dark #time-remaining {
+  color: #66B2FF;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+#clock-container:hover #time-remaining {
+  opacity: 1;
+}
 
 #controls {
-  position: absolute; top: 0; right: 0;
-  display: flex; gap: 8px; padding: 10px;
+  position: absolute; 
+  top: 0; 
+  right: 0;
+  display: flex; 
+  gap: 8px; 
+  padding: 10px;
   backdrop-filter: blur(6px);
   background: rgba(255,255,255,0.2);
   border-bottom-left-radius: 10px;
 }
-body.dark #controls { background: rgba(0,0,0,0.3); }
+body.dark #controls { 
+  background: rgba(0,0,0,0.3); 
+}
 
 #controls button {
   border: none;
@@ -116,7 +232,9 @@ body.dark #controls button {
 }
 
 #progress {
-  position: absolute; top: 10px; left: 10px;
+  position: absolute; 
+  top: 10px; 
+  left: 10px;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(6, 1fr);
@@ -133,7 +251,9 @@ body.dark #controls button {
   padding: 2px;
   transition: all 0.2s;
 }
-body.dark .segment { background: rgba(0,0,0,0.3); }
+body.dark .segment { 
+  background: rgba(0,0,0,0.3); 
+}
 
 .task-card {
   background: rgba(255,255,255,0.9);
@@ -158,7 +278,9 @@ body.dark .task-card {
 
 #next-tasks {
   position: absolute;
-  bottom: 20px; left: 50%; transform: translateX(-50%);
+  bottom: 20px; 
+  left: 50%; 
+  transform: translateX(-50%);
   background: rgba(255,255,255,0.85);
   padding: 12px;
   border-radius: 12px;
@@ -166,14 +288,19 @@ body.dark .task-card {
   min-width: 250px;
   text-align: center;
 }
-body.dark #next-tasks { background: rgba(20,20,20,0.85); }
+body.dark #next-tasks { 
+  background: rgba(20,20,20,0.85); 
+}
 
 #next-tasks h4 {
   margin: 0 0 8px 0;
   font-size: 0.9rem;
   color: #007ACC;
 }
-body.dark #next-tasks h4 { color: #66B2FF; }
+body.dark #next-tasks h4 { 
+  color: #66B2FF; 
+}
+
 .next-task-item {
   display: flex;
   align-items: center;
@@ -187,12 +314,10 @@ body.dark #next-tasks h4 { color: #66B2FF; }
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   animation: slideFadeIn 0.3s ease;
 }
+
 @keyframes slideFadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
-}
-.next-task-item {
-  animation: slideFadeIn 0.4s ease;
 }
 
 .next-task-item:hover {
@@ -200,13 +325,13 @@ body.dark #next-tasks h4 { color: #66B2FF; }
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
-.task-time {
+.next-task-time, .task-time {
   font-weight: 600;
   font-size: 0.9rem;
   color: #007aff;
 }
 
-.task-desc {
+.next-task-name, .task-desc {
   flex: 1;
   margin-left: 10px;
   font-size: 0.85rem;
@@ -214,8 +339,9 @@ body.dark #next-tasks h4 { color: #66B2FF; }
 }
 
 .task-dot {
-  width: 10px; height: 10px;
-  background: #34c759; /* green by default */
+  width: 10px; 
+  height: 10px;
+  background: #34c759;
   border-radius: 50%;
 }
 
@@ -224,31 +350,50 @@ body.dark .next-task-item {
   color: #eee;
 }
 
-@keyframes fadeIn {
-  from { opacity:0; transform: translateY(5px); }
-  to { opacity:1; transform: translateY(0); }
+body.dark .next-task-name,
+body.dark .task-desc {
+  color: #eee;
 }
 
 .modal {
-  position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
-  background: #fff; padding: 20px; border-radius: 12px;
+  position: fixed; 
+  top: 50%; 
+  left: 50%; 
+  transform: translate(-50%,-50%);
+  background: #fff; 
+  padding: 20px; 
+  border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   display: none;
   z-index: 10;
 }
 .modal input {
-  width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;
+  width: 100%; 
+  margin-bottom: 8px; 
+  padding: 8px; 
+  border: 1px solid #ccc; 
+  border-radius: 4px;
 }
 .modal button {
-  padding: 6px 12px; margin-top: 6px;
+  padding: 6px 12px; 
+  margin-top: 6px;
 }
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-
 </head>
 <body>
 
+<div id="progress-ring">
+  <svg>
+    <circle class="ring-bg" cx="140" cy="140" r="136"></circle>
+    <circle class="ring-progress" cx="140" cy="140" r="136"></circle>
+  </svg>
+</div>
+
+<div class="progress-dots"></div>
+
 <div id="clock-container">
+  <div id="time-remaining">25:30 remaining</div>
   <div id="clock">12:00</div>
   <div id="date">Monday, July 1</div>
 </div>
@@ -259,7 +404,7 @@ body.dark .next-task-item {
   <button id="fullscreenBtn">⛶</button>
   <button id="darkModeBtn">🌙</button>
   <button id="addTaskBtn">➕</button>
-    <button id="connectBtn">📡</button>
+  <button id="connectBtn">📡</button>
 </div>
 
 <div id="next-tasks">
@@ -282,7 +427,6 @@ body.dark .next-task-item {
   <button id="credentialsConnectBtn">Connect</button>
 </div>
 
-
 <script>
 const progress = document.getElementById('progress');
 const clock = document.getElementById('clock');
@@ -294,11 +438,14 @@ const saveTaskBtn = document.getElementById('saveTaskBtn');
 const cancelTaskBtn = document.getElementById('cancelTaskBtn');
 const nextTasksList = document.getElementById('next-tasks-list');
 const credentialsConnectBtn = document.getElementById('credentialsConnectBtn');
+const progressRing = document.querySelector('#progress-ring .ring-progress');
+const timeRemaining = document.getElementById('time-remaining');
 
 let sheetId = null;
 const RANGE = 'Sheet1!A2:D';
 let accessToken = null;
 let tokenClient;
+
 const segments = [];
 for (let i = 0; i < 48; i++) {
   const seg = document.createElement('div');
@@ -306,6 +453,61 @@ for (let i = 0; i < 48; i++) {
   progress.appendChild(seg);
   segments.push(seg);
 }
+
+// Create progress dots around the ring
+function createProgressDots() {
+  const dotsContainer = document.querySelector('.progress-dots');
+  const numDots = 12; // One dot every 2.5 minutes
+  
+  for (let i = 0; i < numDots; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'progress-dot';
+    
+    const angle = (i * 360 / numDots) - 90; // Start from top
+    const radius = 150;
+    const x = 150 + radius * Math.cos(angle * Math.PI / 180);
+    const y = 150 + radius * Math.sin(angle * Math.PI / 180);
+    
+    dot.style.left = `${x - 3}px`;
+    dot.style.top = `${y - 3}px`;
+    
+    dotsContainer.appendChild(dot);
+  }
+}
+
+createProgressDots();
+
+function updateProgressRing() {
+  const now = new Date();
+  const minutes = now.getMinutes();
+  const seconds = now.getSeconds();
+  
+  // Calculate progress within 30-minute cycle
+  const elapsed = (minutes % 30) * 60 + seconds;
+  const total = 30 * 60; // 30 minutes in seconds
+  const remaining = total - elapsed;
+  
+  // Update progress ring
+  const circumference = 2 * Math.PI * 136; // 2πr
+  const progress = elapsed / total;
+  const offset = circumference - (progress * circumference);
+  
+  progressRing.style.strokeDashoffset = offset;
+  
+  // Update time remaining display
+  const rmMin = Math.floor(remaining / 60);
+  const rmSec = remaining % 60;
+  timeRemaining.textContent = `${rmMin}:${rmSec.toString().padStart(2, '0')} remaining`;
+  
+  // Update progress dots
+  const dots = document.querySelectorAll('.progress-dot');
+  const activeDots = Math.floor((elapsed / total) * dots.length);
+  
+  dots.forEach((dot, index) => {
+    dot.classList.toggle('active', index < activeDots);
+  });
+}
+
 function clearSegments() {
   segments.forEach(seg => seg.innerHTML = '');
 }
@@ -314,7 +516,11 @@ function updateClock() {
   const now = new Date();
   clock.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
   dateDiv.textContent = now.toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
+  
+  // Update progress ring
+  updateProgressRing();
 }
+
 setInterval(updateClock, 1000);
 updateClock();
 
@@ -330,7 +536,11 @@ saveTaskBtn.onclick = () => {
   if (!desc || !time) return alert('Fill all fields');
   const div = document.createElement('div');
   div.className = 'next-task-item';
-  div.textContent = `${new Date(time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} - ${desc}`;
+  div.innerHTML = `
+    <div class="task-time">${new Date(time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+    <div class="task-desc">${desc}</div>
+    <div class="task-dot"></div>
+  `;
   nextTasksList.appendChild(div);
   showModal(false);
   document.getElementById('taskInput').value = '';
@@ -339,10 +549,12 @@ saveTaskBtn.onclick = () => {
 
 darkBtn.onclick = () => document.body.classList.toggle('dark');
 
+const fullscreenBtn = document.getElementById('fullscreenBtn');
 fullscreenBtn.onclick = () => {
   if (!document.fullscreenElement) document.documentElement.requestFullscreen();
   else document.exitFullscreen();
 }
+
 const credentialsModal = document.getElementById('credentials-modal');
 const connectBtn = document.getElementById('connectBtn');
 const clientIdInput = document.getElementById('clientIdInput');
@@ -353,13 +565,9 @@ if (localStorage.clientId && localStorage.sheetId) {
   sheetIdInput.value = localStorage.sheetId;
 }
 
-
 connectBtn.onclick = () => {
   credentialsModal.classList.toggle('show');
 };
-
-
-
 
 credentialsConnectBtn.onclick = () => {
   const clientId = clientIdInput.value.trim();
@@ -373,7 +581,6 @@ credentialsConnectBtn.onclick = () => {
   credentialsModal.classList.remove('show');
   initOAuth();
 };
-
 
 function initOAuth() {
   const clientId = localStorage.clientId;
@@ -437,7 +644,7 @@ function loadTasks(sheetId) {
       segments[segmentIndex].appendChild(taskDiv);
     });
 
-    // 🔷 Now populate Next Tasks
+    // Populate Next Tasks
     const nextTasksList = document.getElementById('next-tasks-list');
     nextTasksList.innerHTML = '';
 
@@ -500,46 +707,26 @@ function loadTasks(sheetId) {
         nextTasksList.appendChild(div);
       });
     }
-
-
   })
   .catch(err => console.error(err));
-  clearSegments();
 }
 
-
-
-function renderTasks(rows) {
-  nextTasksList.innerHTML = '';
-  if (rows.length === 0) return;
-
-  // find the soonest task
-  const [firstName,,firstTime] = rows[0];
-  updateCountdown(firstTime);
-
-  rows.slice(0, 3).forEach(row => {
-    const [name,,createdAt] = row;
-
-    const div = document.createElement('div');
-    div.className = 'next-task-item';
-    div.innerHTML = `
-      <div class="task-time">${createdAt || ''}</div>
-      <div class="task-desc">${name}</div>
-      <div class="task-dot"></div>
-    `;
-    nextTasksList.appendChild(div);
-  });
+function updateTask(rowIndex, status) {
+  if (!accessToken || !localStorage.sheetId) return;
+  
+  fetch(`https://sheets.googleapis.com/v4/spreadsheets/${localStorage.sheetId}/values/Sheet1!B${rowIndex}?valueInputOption=RAW`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      values: [[status]]
+    })
+  })
+  .then(() => loadTasks(localStorage.sheetId))
+  .catch(err => console.error('Error updating task:', err));
 }
-
-flatpickr("#mini-calendar", {
-  inline: true,
-  defaultDate: new Date(),
-  locale: {
-    firstDayOfWeek: 1
-  }
-});
-
-
 </script>
 </body>
 </html>
