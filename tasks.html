@@ -663,10 +663,14 @@ const taskCounterDiv = document.getElementById('taskCounter');
 const streakDisplayDiv = document.getElementById('streakDisplay');
 const streakTextDiv = document.getElementById('streakText');
 
-// Load saved credentials
-if (localStorage.clientId) clientIdInput.value = localStorage.clientId;
-if (localStorage.sheetId) sheetIdInput.value = localStorage.sheetId;
-if (localStorage.accessToken) accessToken = localStorage.accessToken;
+// Load saved credentials from memory instead of localStorage
+let savedClientId = '';
+let savedSheetId = '';
+let savedAccessToken = '';
+
+if (savedClientId) clientIdInput.value = savedClientId;
+if (savedSheetId) sheetIdInput.value = savedSheetId;
+if (savedAccessToken) accessToken = savedAccessToken;
 
 // Event listeners
 startBtn.onclick = initializeApp;
@@ -692,8 +696,8 @@ function initializeApp() {
     return;
   }
   
-  localStorage.clientId = clientId;
-  localStorage.sheetId = sheetId;
+  savedClientId = clientId;
+  savedSheetId = sheetId;
   
   initClient();
   setupCardDiv.style.display = 'none';
@@ -711,7 +715,7 @@ function initClient() {
     scope: SCOPES,
     callback: (resp) => {
       accessToken = resp.access_token;
-      localStorage.accessToken = accessToken;
+      savedAccessToken = accessToken;
       showMainInterface();
     }
   });
@@ -733,7 +737,7 @@ function revokeToken() {
   if (accessToken) {
     google.accounts.oauth2.revoke(accessToken, () => {
       accessToken = null;
-      localStorage.removeItem('accessToken');
+      savedAccessToken = '';
       showStatus('Signed out successfully', 'success');
       
       authorizeBtn.style.display = 'inline-block';
@@ -1127,3 +1131,6 @@ document.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('data:text/javascript,console.log("SW registered")').catch(() => {});
 }
+</script>
+</body>
+</html>
