@@ -329,8 +329,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>CV Evaluator</h1>
-            <p>Upload a CV and job description to get an objective match analysis</p>
+            <h1>CV Evaluator & Job Search</h1>
+            <p>Upload a CV, search jobs via Greenhouse, and get match analyses</p>
         </div>
 
         <div class="card">
@@ -345,67 +345,66 @@
             </div>
 
             <div class="input-group">
-                <label class="label" for="jobDesc">Job Description</label>
-                <textarea id="jobDesc" class="textarea" placeholder="Paste the job description here..."></textarea>
+                <label class="label" for="greenhouseCompany">Greenhouse Board Slug</label>
+                <input type="text" id="greenhouseCompany" class="textarea" placeholder="e.g. yourcompany" />
+            </div>
+            <div class="input-group">
+                <label class="label" for="jobTitles">Job Titles (comma-separated)</label>
+                <input type="text" id="jobTitles" class="textarea" placeholder="e.g. Software Engineer, Backend Developer" />
+            </div>
+            <div class="input-group">
+                <label class="label" for="locationFilter">Location Filter</label>
+                <input type="text" id="locationFilter" class="textarea" placeholder="e.g. London, Remote" />
             </div>
 
-            <button id="evaluateBtn" class="evaluate-btn">Evaluate Match</button>
+            <button id="evaluateBtn" class="evaluate-btn">Search & Evaluate Jobs</button>
         </div>
 
         <div class="error" id="errorMsg"></div>
-
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Analyzing CV and job description...</p>
+            <p>Working...</p>
         </div>
-
         <div class="results" id="results">
-            <div class="match-score" id="matchScore">
-                <h2 id="scoreValue">--%</h2>
-                <p>Match Score</p>
-                <div class="verdict" id="verdict"></div>
-            </div>
-            <div class="card">
-                <div class="results-content" id="resultsContent"></div>
-            </div>
+            <div id="resultsContent"></div>
         </div>
     </div>
 
     <script>
-        // Initialize PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
         const elements = {
             apiKey: document.getElementById('apiKey'),
             cvFile: document.getElementById('cvFile'),
-            jobDesc: document.getElementById('jobDesc'),
+            greenhouseCompany: document.getElementById('greenhouseCompany'),
+            jobTitles: document.getElementById('jobTitles'),
+            locationFilter: document.getElementById('locationFilter'),
             evaluateBtn: document.getElementById('evaluateBtn'),
             loading: document.getElementById('loading'),
             results: document.getElementById('results'),
             errorMsg: document.getElementById('errorMsg'),
-            scoreValue: document.getElementById('scoreValue'),
-            verdict: document.getElementById('verdict'),
             resultsContent: document.getElementById('resultsContent')
         };
 
-        // Extract text from PDF
         async function extractTextFromPDF(file) {
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-                let text = '';
-
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    const pageText = textContent.items.map(item => item.str).join(' ');
-                    text += pageText + '\n';
-                }
-
-                return text.trim();
-            } catch (error) {
-                throw new Error('Failed to extract text from PDF: ' + error.message);
+            const buf = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument(buf).promise;
+            let text = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                text += content.items.map(item => item.str).join(' ') + '\n';
             }
+            return text;
+        }
+
+        async function fetchGreenhouseJobs(board, titles, location) {
+            const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${board}/jobs?content=true`);
+
+            if (!res.ok) throw new Error('Greenhouse API error');
+            const data = await res.json();
+            return data.jobs
+                .filter(job => titles.some(t => job.title.toLowerCase().includes(t.toLowerCase())))
+                .filter(job => !location || job.location.name.toLowerCase().includes(location.toLowerCase()));
         }
 
         // Call ChatGPT API
@@ -419,6 +418,7 @@ You must assess how well the CV matches the explicit requirements and responsibi
 3️⃣ For each category, review the CV and assign a **score from 0–10**, based ONLY on evidence explicitly present in the CV. If the skill or experience is not mentioned explicitly, score it as 0.   
 4️⃣ Compute the weighted score for each category: (score / 10) × weight.   
 5️⃣ Sum all weighted scores to get the **final match percentage (0–100)**. 
+6 Analyise what else do i need to excle at this job if I applied . 
 
 ### Instructions: 
 - Do NOT assume anything not written in the CV. 
@@ -448,6 +448,9 @@ You must assess how well the CV matches the explicit requirements and responsibi
 
 4️⃣ **Evidence:**   
 List bullet‑points of explicit CV lines or phrases that justify each score. 
+
+6 **Whats next :**   
+List bullet‑points of Analyise what else do i need to excle at this job if I applied give a link to each poiunt of where to learn that like coure of book but make sure to include a link ( this is yuor advice to me as cadidste to improve my skills )  . 
 
 Here is the Job Description: 
 ${jobDesc}
@@ -487,144 +490,123 @@ Now perform the evaluation.`;
 
         // Convert markdown to HTML
         function markdownToHtml(markdown) {
-            let html = markdown;
-            
-            // Convert headers
-            html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
-            html = html.replace(/^## (.*$)/gm, '<h3>$1</h3>');
-            html = html.replace(/^# (.*$)/gm, '<h3>$1</h3>');
-            
-            // Convert bold text
-            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            
-            // Convert tables
-            html = html.replace(/\n\|(.+)\|\n\|[-\s|]+\|\n((?:\|.+\|\n?)*)/g, (match, header, rows) => {
-                const headerCells = header.split('|').map(cell => `<th>${cell.trim()}</th>`).join('');
-                const rowsHtml = rows.split('\n').filter(row => row.trim()).map(row => {
-                    const cells = row.split('|').map(cell => `<td>${cell.trim()}</td>`).join('');
-                    return `<tr>${cells}</tr>`;
-                }).join('');
-                
-                return `<table><thead><tr>${headerCells}</tr></thead><tbody>${rowsHtml}</tbody></table>`;
-            });
-            
-            // Convert bullet points
-            html = html.replace(/^\- (.+)$/gm, '<li>$1</li>');
-            html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
-            
-            // Convert line breaks
-            html = html.replace(/\n\n/g, '</p><p>').replace(/^/, '<p>').replace(/$/, '</p>');
-            html = html.replace(/<p><\/p>/g, '');
-            html = html.replace(/<p>(<h3>)/g, '$1').replace(/(<\/h3>)<\/p>/g, '$1');
-            html = html.replace(/<p>(<table>)/g, '$1').replace(/(<\/table>)<\/p>/g, '$1');
-            html = html.replace(/<p>(<ul>)/g, '$1').replace(/(<\/ul>)<\/p>/g, '$1');
-            
-            return html;
+    // Start with the raw markdown
+    let html = markdown;
+
+    // Convert headers (###, ##, #) to <h3>
+    html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.*$)/gm, '<h3>$1</h3>');
+    html = html.replace(/^# (.*$)/gm, '<h3>$1</h3>');
+
+    // Convert bold text **bold**
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+    // Convert markdown tables
+    // Matches:
+    //  \n|Head1|Head2|\n|-----|-----|\n|Row1|Row2|\n...
+    html = html.replace(
+      /\n\|(.+)\|\n\|[-\s|]+\|\n((?:\|.+\|\n?)*)/g,
+      (match, headerLine, rowsBlock) => {
+        // headers
+        const headers = headerLine
+          .split('|')
+          .map(cell => `<th>${cell.trim()}</th>`)
+          .join('');
+        // rows
+        const rows = rowsBlock
+          .split('\n')
+          .filter(r => r.trim())
+          .map(row => {
+            const cols = row
+              .split('|')
+              .map(cell => `<td>${cell.trim()}</td>`)
+              .join('');
+            return `<tr>${cols}</tr>`;
+          })
+          .join('');
+        return `<table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
+      }
+    );
+
+    // Convert bullet points (“- item”) into <ul><li>…</li></ul>
+    html = html.replace(/^\- (.+)$/gm, '<li>$1</li>');
+    // Wrap consecutive <li>...</li> with <ul>…</ul>
+    html = html.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
+
+    // Convert double newlines into paragraph breaks
+    html = html
+      .replace(/\n\n/g, '</p><p>')   // blank line → </p><p>
+      .replace(/^/, '<p>')           // start → <p>
+      .replace(/$/, '</p>');         // end → </p>
+
+    // Clean up empty paragraphs
+    html = html.replace(/<p><\/p>/g, '');
+
+    // Avoid wrapping block elements in <p>
+    html = html.replace(/<p>(<h3>)/g, '$1');
+    html = html.replace(/(<\/h3>)<\/p>/g, '$1');
+    html = html.replace(/<p>(<table>)/g, '$1');
+    html = html.replace(/(<\/table>)<\/p>/g, '$1');
+    html = html.replace(/<p>(<ul>)/g, '$1');
+    html = html.replace(/(<\/ul>)<\/p>/g, '$1');
+
+    return html;
+}
+
+ function extractMatchPercentage(resp) {
+            const m = resp.match(/Final Match Percentage[^:]*:\s*(\d+(?:\.\d+)?)/i);
+            return m ? parseFloat(m[1]) : 0;
         }
 
-        // Extract match percentage from response
-        function extractMatchPercentage(response) {
-            const match = response.match(/Final Match Percentage[^:]*:\s*(\d+(?:\.\d+)?)/i);
-            return match ? parseFloat(match[1]) : 0;
-        }
-
-        // Get verdict class based on score
-        function getVerdictClass(score) {
-            if (score > 80) return 'excellent';
-            if (score >= 60) return 'good';
-            if (score >= 40) return 'partial';
-            return 'poor';
-        }
-
-        // Get verdict text based on score
-        function getVerdictText(score) {
-            if (score > 80) return 'Excellent Fit';
-            if (score >= 60) return 'Good Fit';
-            if (score >= 40) return 'Partial Fit';
-            return 'Poor Fit';
-        }
-
-        // Show error message
-        function showError(message) {
-            elements.errorMsg.textContent = message;
-            elements.errorMsg.classList.add('show');
-        }
-
-        // Hide error message
-        function hideError() {
-            elements.errorMsg.classList.remove('show');
-        }
-
-        // Main evaluation function
         async function evaluateCV() {
-            hideError();
-            
-            // Validate inputs
-            if (!elements.apiKey.value.trim()) {
-                showError('Please enter your OpenAI API key');
-                return;
-            }
-            
-            if (!elements.cvFile.files[0]) {
-                showError('Please upload a CV PDF file');
-                return;
-            }
-            
-            if (!elements.jobDesc.value.trim()) {
-                showError('Please enter a job description');
-                return;
-            }
+            elements.errorMsg.classList.remove('show');
+            if (!elements.apiKey.value || !elements.cvFile.files[0]) { elements.errorMsg.textContent = 'API key and CV PDF are required'; elements.errorMsg.classList.add('show'); return; }
 
-            // Show loading state
             elements.evaluateBtn.disabled = true;
             elements.loading.classList.add('show');
             elements.results.classList.remove('show');
-
+            elements.resultsContent.innerHTML = '';
             try {
-                // Extract text from PDF
                 const cvText = await extractTextFromPDF(elements.cvFile.files[0]);
-                
-                // Call ChatGPT API
-                const response = await callChatGPT(
-                    cvText, 
-                    elements.jobDesc.value.trim(),
-                    elements.apiKey.value.trim()
-                );
-                
-                // Extract match percentage
-                const matchPercentage = extractMatchPercentage(response);
-                
-                // Update results
-                elements.scoreValue.textContent = `${Math.round(matchPercentage)}%`;
-                elements.verdict.textContent = getVerdictText(matchPercentage);
-                elements.verdict.className = `verdict ${getVerdictClass(matchPercentage)}`;
-                elements.resultsContent.innerHTML = markdownToHtml(response);
-                
-                // Show results with animation
+                const board = elements.greenhouseCompany.value.trim();
+                const titles = elements.jobTitles.value.split(',').map(s => s.trim()).filter(Boolean);
+                const loc = elements.locationFilter.value.trim();
+
+                if (board && titles.length) {
+                    const jobs = await fetchGreenhouseJobs(board, titles, loc);
+                  
+const jobs1 = jobs.slice(0, 2);
+                                        console.log(jobs1.length )
+
+                    if (!jobs1.length) throw new Error('No jobs found with given filters');
+
+                    for (let job of jobs1) {
+                        const res = await callChatGPT(cvText, job.content || job.description || job.absolute_url, elements.apiKey.value);
+                        const score = extractMatchPercentage(res);
+                        const html = `
+                          <div class="card">
+                            <div class="match-score"><h2>${Math.round(score)}%</h2><p>${job.title}</p></div>
+                            <div class="results-content">${markdownToHtml(res)}</div>
+                          </div>
+                        `;
+                        elements.resultsContent.innerHTML += html;
+                    }
+                } else {
+                    elements.errorMsg.textContent = 'Provide a Greenhouse board slug and at least one job title';
+                    elements.errorMsg.classList.add('show');
+                }
+
                 elements.loading.classList.remove('show');
-                setTimeout(() => {
-                    elements.results.classList.add('show');
-                }, 100);
-                
-            } catch (error) {
-                console.error('Evaluation error:', error);
-                showError('Error: ' + error.message);
+                elements.results.classList.add('show');
+            } catch (err) {
+                elements.errorMsg.textContent = err.message;
+                elements.errorMsg.classList.add('show');
                 elements.loading.classList.remove('show');
             } finally {
                 elements.evaluateBtn.disabled = false;
             }
         }
-
-        // Event listeners
         elements.evaluateBtn.addEventListener('click', evaluateCV);
-        
-        // Allow Enter key in textarea but not submit
-        elements.jobDesc.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                // Allow normal Enter behavior in textarea
-                return;
-            }
-        });
     </script>
 </body>
 </html>
